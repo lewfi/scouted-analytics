@@ -1,36 +1,144 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Riot Esports Analytics
+
+A clean, data-driven website for tracking Tier 1 League of Legends esports across all major regions — LCK, LEC, LCS, LPL, and LCP. Built for fans who want real stats, live match tracking, and useful tools for Pick'em brackets and PrizePicks decisions, all in one place.
+
+---
+
+## Features
+
+### Live (Phase 0 ✅)
+- Supabase Postgres database with full schema for regions, teams, players, tournaments, standings, matches, and per-game stats
+- Next.js App Router project with TypeScript and Tailwind CSS
+- Supabase client utilities for both server and browser contexts
+- Row Level Security (RLS) enabled across all tables
+
+### In Progress (Phase 1)
+- Team pages — roster, record, standings
+- Player pages — KDA, CS, champion pool
+- Homepage with region tabs
+- Search by player or team
+- Split-level stat tables
+
+### Planned
+- **Phase 2** — Charts & graphs, live match tracker, radar charts per role, public beta
+- **Phase 3** — Pick'em helper tool, Worlds/MSI tournament hub, champion meta tracker
+- **Phase 4** — User accounts & favorites, betting insights panel, mobile PWA, public API
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 16 (App Router), Tailwind CSS |
+| Data Visualization | Recharts, D3.js |
+| Backend | Next.js API Routes |
+| Database | Supabase Postgres |
+| Auth | Supabase Auth |
+| Caching | Upstash Redis |
+| Realtime | Supabase Realtime |
+| Data Sources | Riot Games API, Leaguepedia, Oracle's Elixir |
+| Hosting | Vercel + Supabase |
+
+---
+
+## Database Schema
+
+Eight tables covering the full data hierarchy:
+
+```
+regions → tournaments → matches → games → player_game_stats
+       → teams → players
+       → standings
+```
+
+- **regions** — LCK, LEC, LCS, LPL, LCP
+- **teams** — per region, with logo URL and active status
+- **players** — linked to teams, with role validation and free agent support
+- **tournaments** — regional splits and international events (Worlds, MSI)
+- **standings** — win/loss record per team per tournament
+- **matches** — best-of series with status tracking (`scheduled`, `live`, `completed`)
+- **games** — individual maps within a match, with patch and duration
+- **player_game_stats** — per-player per-game stats; KDA is a generated column (auto-calculated)
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18+
+- A Supabase project
+- Riot Games API key
+
+### Installation
+
+```bash
+git clone https://github.com/YOUR_USERNAME/riot-esports-analytics.git
+cd riot-esports-analytics
+npm install
+```
+
+### Environment Variables
+
+Create a `.env.local` file in the project root:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-publishable-key
+SUPABASE_SERVICE_ROLE_KEY=your-secret-key
+```
+
+Get these values from your Supabase dashboard under **Settings → API Keys**.
+
+### Database Setup
+
+Run the migration file against your Supabase project via the SQL Editor:
+
+```
+supabase/migrations/001_initial_schema.sql
+```
+
+This creates all tables, indexes, RLS policies, and seeds the 5 regions.
+
+### Run the Dev Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project Structure
 
-## Learn More
+```
+riot-esports-analytics/
+├── app/                  # Next.js App Router pages and layouts
+├── components/           # Reusable UI components
+├── lib/
+│   └── supabase/
+│       ├── client.ts     # Browser Supabase client (anon key)
+│       └── server.ts     # Server Supabase client + admin client
+├── supabase/
+│   └── migrations/       # SQL migration files
+├── .env.local            # Local environment variables (gitignored)
+└── README.md
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Data Sources
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **[Riot Games API](https://developer.riotgames.com/)** — Official match and player data
+- **[Leaguepedia](https://lol.fandom.com/wiki/League_of_Legends_Esports_Wiki)** — Community-maintained esports history and stats
+- **[Oracle's Elixir](https://oracleselixir.com/)** — Advanced esports statistics
+- **[Community Dragon](https://www.communitydragon.org/)** — Free CDN for champion and team assets
 
-## Deploy on Vercel
+> **Note:** Standard Riot API keys do not include live esports feeds. The live match tracker is planned for Phase 3, pending a partner key.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT
