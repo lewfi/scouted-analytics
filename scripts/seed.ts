@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import * as dotenv from 'dotenv'
 import { parse } from 'csv-parse/sync'
-import * as fs from 'fs'
-import * as path from 'path'
 dotenv.config({ path: '.env.local' })
 
 const leagueToRegion: Record<string, string> = {
@@ -25,9 +23,15 @@ const positionToRole: Record<string, string> = {
 }
 
 const CSV_FILES = [
-  '2025_LoL_esports_match_data_from_OraclesElixir.csv',
-  '2026_LoL_esports_match_data_from_OraclesElixir.csv',
+  { id: '1v6LRphp2kYciU4SXp0PCjEMuev1bDejc', year: '2025' },
+  { id: '1hnpbrUpBMS1TZI7IovfpKeZfWJH1Aptm', year: '2026' },
 ]
+
+async function downloadCSV(fileId: string): Promise<string> {
+    const url = `https://drive.google.com/uc?export=download&id=${fileId}`
+    const res = await fetch(url)
+    return await res.text()
+}
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,8 +44,7 @@ async function seedTournaments(regionMap: Record<string, string>) {
     console.log('Seeding tournaments...')
 
     for (const file of CSV_FILES) {
-        const filePath = path.join('scripts', 'data', file)
-        const content = fs.readFileSync(filePath, 'utf-8')
+        const content = await downloadCSV(file.id)
         const rows = parse(content, { columns: true, skip_empty_lines: true }) as any[]
 
         const seen = new Set<string>()  // Set used because it only stores unique values
@@ -70,9 +73,9 @@ async function seedTournaments(regionMap: Record<string, string>) {
             .upsert(tournaments, { onConflict: 'name' })
 
         if (error) {
-            console.error(`Error upserting tournaments from ${file}:`, error.message)
+            console.error(`Error upserting tournaments from ${file.year}:`, error.message)
         } else {
-            console.log(`✓ ${tournaments.length} tournaments upserted from ${file}`)
+            console.log(`✓ ${tournaments.length} tournaments upserted from ${file.year}`)
         }
 
     }
@@ -82,8 +85,7 @@ async function seedTeams(regionMap: Record<string, string>) {
     console.log('Seeding teams...')
 
     for (const file of CSV_FILES) {
-        const filePath = path.join('scripts', 'data', file)
-        const content = fs.readFileSync(filePath, 'utf-8')
+        const content = await downloadCSV(file.id)
         const rows = parse(content, { columns: true, skip_empty_lines: true }) as any[]
 
         const seen = new Set<string>()
@@ -111,9 +113,9 @@ async function seedTeams(regionMap: Record<string, string>) {
             .upsert(teams, { onConflict: 'slug' })
 
         if (error) {
-            console.error(`Error upserting teams from ${file}:`, error.message)
+            console.error(`Error upserting teams from ${file.year}:`, error.message)
         } else {
-            console.log(`✓ ${teams.length} teams upserted from ${file}`)
+            console.log(`✓ ${teams.length} teams upserted from ${file.year}`)
         }
     }
 }
@@ -122,8 +124,7 @@ async function seedPlayers(teamMap: Record<string, string>) {
     console.log('Seeding players...')
 
     for (const file of CSV_FILES) {
-        const filePath = path.join('scripts', 'data', file)
-        const content = fs.readFileSync(filePath, 'utf-8')
+        const content = await downloadCSV(file.id)
         const rows = parse(content, { columns: true, skip_empty_lines: true }) as any[]
 
         const seen = new Set<string>()
@@ -152,9 +153,9 @@ async function seedPlayers(teamMap: Record<string, string>) {
             .upsert(players, { onConflict: 'summoner_name' })
 
         if (error) {
-            console.error(`Error upserting players from ${file}:`, error.message)
+            console.error(`Error upserting players from ${file.year}:`, error.message)
         } else {
-            console.log(`✓ ${players.length} players upserted from ${file}`)
+            console.log(`✓ ${players.length} players upserted from ${file.year}`)
         }
     }
 }
@@ -163,8 +164,7 @@ async function seedMatches(tournamentMap: Record<string, string>, teamMap: Recor
     console.log('Seeding matches...')
 
     for (const file of CSV_FILES) {
-        const filePath = path.join('scripts', 'data', file)
-        const content = fs.readFileSync(filePath, 'utf-8')
+        const content = await downloadCSV(file.id)
         const rows = parse(content, { columns: true, skip_empty_lines: true }) as any[]
 
         const gameRows = new Map<string, any[]>()
@@ -208,14 +208,12 @@ async function seedMatches(tournamentMap: Record<string, string>, teamMap: Recor
             .upsert(matches, { onConflict: 'leaguepedia_id' })
 
         if (error) {
-            console.error(`Error upserting matches from ${file}:`, error.message)
+            console.error(`Error upserting matches from ${file.year}:`, error.message)
         } else {
-            console.log(`✓ ${matches.length} matches upserted from ${file}`)
+            console.log(`✓ ${matches.length} matches upserted from ${file.year}`)
         }
     }
 }
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 // get Functions
 
