@@ -154,12 +154,6 @@ scouted/
 
 ---
 
-## Contributing
-
-This is a personal project and not currently open for external contributions. Feel free to fork it for your own use.
-
----
-
 ## License
 
 MIT
