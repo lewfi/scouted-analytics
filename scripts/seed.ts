@@ -178,28 +178,83 @@ async function seedMatches(tournamentMap: Record<string, string>, teamMap: Recor
             }
             gameRows.get(row.gameid)!.push(row) // ! used to ensure Typescript that value is not undefined for .get()
         }
-        
-        const matches: any[] = []
 
+        // step 1: group games into series using game=1 as anchor
+        const seriesMap = new Map<string, any[]>()
+        const gameToSeries = new Map<string, string>() // maps gameid → seriesKey
+
+        // first pass: create series from game 1s
         for (const [gameid, game] of gameRows) {
-            const blueRow = game.find((r: any) => r.side === 'Blue') // .find() returns the first player row where side is Blue
+            const blueRow = game.find((r: any) => r.side === 'Blue')
             const redRow = game.find((r: any) => r.side === 'Red')
             if (!blueRow || !redRow) continue
+            if (blueRow.game !== '1') continue // only process game 1s first
+
+            const teams = [blueRow.teamname, redRow.teamname].sort().join('-')
+            const seriesKey = `${blueRow.league}-${blueRow.year}-${blueRow.split}-${blueRow.playoffs}-${teams}-${gameid}`
+
+            seriesMap.set(seriesKey, [{ blueRow, redRow, gameNum: 1 }])
+            gameToSeries.set(gameid, seriesKey)
+        }
+
+        // second pass: add game 2s and 3s to their series
+        for (const [gameid, game] of gameRows) {
+            const blueRow = game.find((r: any) => r.side === 'Blue')
+            const redRow = game.find((r: any) => r.side === 'Red')
+            if (!blueRow || !redRow) continue
+            if (blueRow.game === '1') continue
+
+            const teams = [blueRow.teamname, redRow.teamname].sort().join('-')
+            const tournamentKey = `${blueRow.league}-${blueRow.year}-${blueRow.split}-${blueRow.playoffs}-${teams}`
+            const gameTime = new Date(blueRow.date).getTime()
+
+            const matchingSeries = [...seriesMap.entries()].find(([key, games]) => {
+                if (!key.startsWith(tournamentKey)) return false
+                if (games.some((g: any) => g.gameNum === parseInt(blueRow.game))) return false
+                // check within 12 hours of game 1
+                const game1Time = new Date(games[0].blueRow.date).getTime()
+                return Math.abs(gameTime - game1Time) < 12 * 60 * 60 * 1000
+            })
+
+            if (matchingSeries) {
+                matchingSeries[1].push({ blueRow, redRow, gameNum: parseInt(blueRow.game) })
+            }
+        }
+
+        // step 2: build match rows from series
+        const matches: any[] = []
+
+        for (const [seriesKey, games] of seriesMap) {
+            const sortedGames = games.sort((a: any, b: any) => a.gameNum - b.gameNum)
+            const { blueRow, redRow } = sortedGames[0]
+            const game1Id = sortedGames[0].blueRow.gameid
 
             const tournamentName = `${blueRow.league} ${blueRow.year} ${blueRow.split}${blueRow.playoffs === '1' ? ' Playoffs' : ''}`
             const tournamentId = tournamentMap[tournamentName]
             if (!tournamentId) continue
 
+            // count wins for each team across all games in the series
+            let blueWins = 0
+            let redWins = 0
+            for (const { blueRow: g } of games) {
+                if (g.result === '1') blueWins++
+                else redWins++
+            }
+
+            const winnerId = blueWins > redWins
+                ? teamMap[blueRow.teamname]
+                : teamMap[redRow.teamname]
+
             matches.push({
                 tournament_id: tournamentId,
                 team_blue_id: teamMap[blueRow.teamname],
                 team_red_id: teamMap[redRow.teamname],
-                winner_id: blueRow.result === '1' ? teamMap[blueRow.teamname] : teamMap[redRow.teamname],
-                blue_score: parseInt(blueRow.result),
-                red_score: parseInt(redRow.result),
+                winner_id: winnerId,
+                blue_score: blueWins,
+                red_score: redWins,
                 scheduled_at: blueRow.date || null,
                 status: 'completed',
-                leaguepedia_id: gameid,
+                leaguepedia_id: game1Id,
             })
         }
 
