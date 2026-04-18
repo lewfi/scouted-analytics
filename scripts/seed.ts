@@ -234,10 +234,14 @@ async function seedMatches(tournamentMap: Record<string, string>, teamMap: Recor
             if (!tournamentId) continue
 
             // count wins for each team across all games in the series
+            // teams swap sides between games, so track by team name not by side
+            const blueTeamName = blueRow.teamname
             let blueWins = 0
             let redWins = 0
             for (const { blueRow: g } of games) {
-                if (g.result === '1') blueWins++
+                const blueWonGame = g.result === '1'
+                const blueTeamOnBlue = g.teamname === blueTeamName
+                if (blueWonGame === blueTeamOnBlue) blueWins++
                 else redWins++
             }
 
