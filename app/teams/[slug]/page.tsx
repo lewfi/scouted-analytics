@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
 
 export default async function TeamPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -59,7 +60,12 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
           })
           .map((player: any) => (
             <div key={player.id} className="flex items-center justify-between bg-zinc-900 rounded-lg px-4 py-3">
-              <span className="text-sm font-medium text-zinc-100">{player.summoner_name}</span>
+              <Link 
+                href={`/players/${encodeURIComponent(player.summoner_name)}`}
+                className="text-sm font-medium text-zinc-100 hover:underline"
+              >
+                {player.summoner_name}
+              </Link>
               <span className="text-xs text-zinc-500 capitalize">{player.role}</span>
             </div>
           ))}
