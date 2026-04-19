@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 
 interface TournamentAccordionProps {
@@ -26,17 +27,17 @@ export default function TournamentAccordion({ tournament }: TournamentAccordionP
                 {/* map through tournament.matches here */}
                 {tournament.matches.map((match: any) => (
                     <div key={match.id} className="grid grid-cols-3 items-center px-4 py-2 rounded hover:bg-zinc-800">
-                        <span className={`text-sm ${match.winner_id === match.team_blue_id ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
-                        {match.team_blue?.name}
-                        </span>
+                        <Link href={`/teams/${match.team_blue?.slug}`} className={`text-sm hover:underline ${match.winner_id === match.team_blue_id ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
+                            {match.team_blue?.name}
+                        </Link>
 
                         <span className="text-sm text-zinc-400 font-mono text-center">
                         {match.blue_score} - {match.red_score}
                         </span>
 
-                        <span className={`text-sm text-right ${match.winner_id === match.team_red_id ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
-                        {match.team_red?.name}
-                        </span>
+                        <Link href={`/teams/${match.team_red?.slug}`} className={`text-sm text-right hover:underline ${match.winner_id === match.team_red_id ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
+                            {match.team_red?.name}
+                        </Link>
 
                     </div>
                 ))}

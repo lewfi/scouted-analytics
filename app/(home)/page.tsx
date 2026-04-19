@@ -8,10 +8,10 @@ export default async function Home() {
     .from('matches')
       .select(`
         *,
-        team_blue:teams!matches_team_blue_id_fkey(id, name, short_name),
-        team_red:teams!matches_team_red_id_fkey(id, name, short_name),
-        winner:teams!matches_winner_id_fkey(id, name, short_name),
-        tournament:tournaments(name, region_id)
+          team_blue:teams!matches_team_blue_id_fkey(id, name, short_name, slug),
+          team_red:teams!matches_team_red_id_fkey(id, name, short_name, slug),
+          winner:teams!matches_winner_id_fkey(id, name, short_name, slug),
+          tournament:tournaments(name, region_id)
       `)
     .eq('status', 'completed')
     .order('scheduled_at', { ascending: false })

@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 interface RecentMatchesProps {
   matches: any[]
 }
@@ -10,17 +12,17 @@ export default function RecentMatches({ matches }: RecentMatchesProps) {
                 <p className="text-xs text-zinc-500 mb-2">{match.tournament?.name}</p>
                 
                 <div className="grid grid-cols-3 items-center">
-                    <span className={`text-sm ${match.winner_id === match.team_blue_id ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
+                    <Link href={`/teams/${match.team_blue?.slug}`} className={`text-sm hover:underline ${match.winner_id === match.team_blue_id ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
                         {match.team_blue?.name}
-                    </span>
+                    </Link>
 
                     <span className="text-sm text-zinc-400 font-mono text-center">
                         {match.blue_score} - {match.red_score}
                     </span>
 
-                    <span className={`text-sm text-right ${match.winner_id === match.team_red_id ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
+                    <Link href={`/teams/${match.team_red?.slug}`} className={`text-sm text-right hover:underline ${match.winner_id === match.team_red_id ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
                         {match.team_red?.name}
-                    </span>
+                    </Link>
 
                 </div>
             </div>

@@ -10,13 +10,13 @@ export default async function RegionPage({ params }: { params: Promise<{ region:
     .select(`
         *,
         tournaments (
-        *,
-        matches (
             *,
-            team_blue:teams!matches_team_blue_id_fkey(id, name, short_name),
-            team_red:teams!matches_team_red_id_fkey(id, name, short_name),
-            winner:teams!matches_winner_id_fkey(id, name, short_name)
-        )
+            matches (
+                *,
+                team_blue:teams!matches_team_blue_id_fkey(id, name, short_name, slug),
+                team_red:teams!matches_team_red_id_fkey(id, name, short_name, slug),
+                winner:teams!matches_winner_id_fkey(id, name, short_name, slug)
+            )
         )
     `)
     .eq('slug', regionSlug)
