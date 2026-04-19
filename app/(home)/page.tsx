@@ -1,29 +1,26 @@
 import { createClient } from '@/lib/supabase/server'
-import MatchList from '@/components/matches/MatchList'
+import RecentMatches from '@/components/matches/RecentMatches'
 
 export default async function Home() {
   const supabase = await createClient()
 
-  const { data:regions } = await supabase
-    .from('regions')
-    .select(`
-      *,
-      tournaments (
+  const { data: matches } = await supabase
+    .from('matches')
+      .select(`
         *,
-        matches (
-          *,
-          team_blue:teams!matches_team_blue_id_fkey(id, name, short_name),
-          team_red:teams!matches_team_red_id_fkey(id, name, short_name),
-          winner:teams!matches_winner_id_fkey(id, name, short_name)
-        )
-      )
-    `)
-    .neq('slug', 'intl')
-    .order('name')
+        team_blue:teams!matches_team_blue_id_fkey(id, name, short_name),
+        team_red:teams!matches_team_red_id_fkey(id, name, short_name),
+        winner:teams!matches_winner_id_fkey(id, name, short_name),
+        tournament:tournaments(name, region_id)
+      `)
+    .eq('status', 'completed')
+    .order('scheduled_at', { ascending: false })
+    .limit(20)
 
   return (
     <div className="p-8">
-      <MatchList regions={regions ?? []} />
+      <h1 className="text-lg font-medium text-zinc-100 mb-6">Recent matches</h1>
+      <RecentMatches matches={matches ?? []} />
     </div>
   )
 }
