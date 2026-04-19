@@ -144,7 +144,6 @@ async function seedPlayers(teamMap: Record<string, string>) {
                 summoner_name: row.playername,
                 team_id: teamMap[row.teamname],
                 role: positionToRole[row.position],
-                is_active: true,
             })
         }
 
@@ -274,6 +273,49 @@ async function seedMatches(tournamentMap: Record<string, string>, teamMap: Recor
     }
 }
 
+async function seedActiveRosters(teamMap: Record<string, string>) {
+    console.log('Setting active rosters...')
+
+    const latestGameByTeam = new Map<string, string>()   // teamname → gameid
+    const latestDateByTeam = new Map<string, string>()   // teamname → date string
+    const playersByGame    = new Map<string, string[]>() // `${gameid}::${teamname}` → playernames
+
+    for (const file of CSV_FILES) {
+        const content = await downloadCSV(file.id)
+        const rows = parse(content, { columns: true, skip_empty_lines: true }) as any[]
+
+        for (const row of rows) {
+            if (!leagueToRegion[row.league]) continue
+            if (!positionToRole[row.position]) continue
+
+            const existing = latestDateByTeam.get(row.teamname)
+            if (!existing || row.date > existing) {
+                latestDateByTeam.set(row.teamname, row.date)
+                latestGameByTeam.set(row.teamname, row.gameid)
+            }
+
+            const key = `${row.gameid}::${row.teamname}`
+            if (!playersByGame.has(key)) playersByGame.set(key, [])
+            playersByGame.get(key)!.push(row.playername)
+        }
+    }
+
+    for (const [teamname, gameid] of latestGameByTeam) {
+        const teamId = teamMap[teamname]
+        if (!teamId) continue
+
+        const activePlayers = playersByGame.get(`${gameid}::${teamname}`) ?? []
+        if (activePlayers.length === 0) continue
+
+        await supabase.from('players').update({ is_active: false }).eq('team_id', teamId)
+        await supabase.from('players').update({ is_active: true })
+            .eq('team_id', teamId)
+            .in('summoner_name', activePlayers)
+    }
+
+    console.log('✓ Active rosters set from most recent games')
+}
+
 // get Functions
 
 async function getTournaments(): Promise<Record<string, string>> {
@@ -321,6 +363,7 @@ async function main() {
 
     const teamMap = await getTeams()
     await seedPlayers(teamMap)
+    await seedActiveRosters(teamMap)
 
     const tournamentMap = await getTournaments()
     await seedMatches(tournamentMap, teamMap)
