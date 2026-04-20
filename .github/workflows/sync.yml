@@ -1,0 +1,28 @@
+name: Sync Leaguepedia
+
+on:
+  schedule:
+    # Runs at 09:00 UTC daily — catches matches from the previous day across all regions
+    - cron: '0 9 * * *'
+  workflow_dispatch: # allows manual trigger from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run Leaguepedia sync
+        run: npx tsx scripts/sync-leaguepedia.ts
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          LEAGUEPEDIA_USERNAME: ${{ secrets.LEAGUEPEDIA_USERNAME }}
+          LEAGUEPEDIA_PASSWORD: ${{ secrets.LEAGUEPEDIA_PASSWORD }}
