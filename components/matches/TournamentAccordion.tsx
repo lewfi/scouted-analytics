@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
+
 interface TournamentAccordionProps {
   tournament: any
 }
@@ -13,13 +14,17 @@ export default function TournamentAccordion({ tournament }: TournamentAccordionP
     return (
     <div className="border border-zinc-800 rounded-lg overflow-hidden">
         {/* header - clicking this toggles open/closed */}
-        <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-zinc-800"
-        >
-            <span className="font-medium text-zinc-100">{tournament.name}</span>
-            <span className="text-zinc-400">{isOpen ? '▲' : '▼'}</span>
-        </button>
+        <div className="flex items-center justify-between px-4 py-3">
+            <Link
+                href={`/tournaments/${encodeURIComponent(tournament.name)}`}
+                className="font-medium text-zinc-100 hover:text-white hover:underline transition-colors"
+            >
+                {tournament.name}
+            </Link>
+            <button onClick={() => setIsOpen(!isOpen)} className="text-zinc-400 hover:text-zinc-200 px-2">
+                {isOpen ? '▲' : '▼'}
+            </button>
+        </div>
 
         {/* match list - only shown when open */}
         {isOpen && (

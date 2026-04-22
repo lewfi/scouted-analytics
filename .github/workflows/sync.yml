@@ -2,8 +2,8 @@ name: Sync Leaguepedia
 
 on:
   schedule:
-    # Runs at 09:00 UTC daily — catches matches from the previous day across all regions
-    - cron: '0 9 * * *'
+    # Runs every 3 hours
+    - cron: '0 */3 * * *'
   workflow_dispatch: # allows manual trigger from GitHub UI
 
 jobs:

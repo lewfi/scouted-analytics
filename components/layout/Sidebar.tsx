@@ -7,56 +7,59 @@ interface SidebarProps {
     onClose: () => void
 }
 
-const linkClass = "text-sm text-zinc-400 hover:text-zinc-100 px-2 py-1.5 rounded hover:bg-zinc-800"
+const linkClass = "text-sm text-zinc-400 hover:text-zinc-100 px-3 py-2 rounded-md hover:bg-zinc-800 transition-all duration-150 flex items-center gap-2"
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     return (
         <>
-            {/* overlay: darkens background when sidebar is open */}
             {isOpen && (
                 <div
                     onClick={onClose}
-                    className="fixed inset-0 bg-black/50 z-20"
+                    className="fixed inset-0 bg-black/60 z-20 animate-fade-in"
                 />
             )}
-            
-            {/* sidebar panel */}
-            <div className={`fixed top-0 left-0 h-full w-64 bg-zinc-900 border-r border-zinc-800 z-30 transition-transform duration-300 ${
+
+            <div className={`fixed top-0 left-0 h-full w-64 bg-zinc-900 border-r border-zinc-800 z-30 transition-transform duration-300 ease-in-out ${
                 isOpen ? 'translate-x-0' : '-translate-x-full'
             }`}>
 
-                {/* header with close button */}
                 <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-800">
-                    <span className="font-semibold text-zinc-100">Scouted</span>
-                    <button onClick={onClose} className="text-zinc-400 hover:text-zinc-100">✕</button>
+                    <Link href="/" onClick={onClose} className="font-semibold text-zinc-100 hover:text-white transition-colors">
+                        Scouted
+                    </Link>
+                    <button
+                        onClick={onClose}
+                        className="w-7 h-7 flex items-center justify-center rounded-md text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-all duration-150"
+                        aria-label="Close menu"
+                    >
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
+                        </svg>
+                    </button>
                 </div>
 
-                {/* nav content */}
-                <div className="p-4 flex flex-col gap-6">
-                
-                    {/* regions section */}
+                <div className="p-3 flex flex-col gap-5">
+
                     <div>
-                        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Regions</p>
-                        <div className="flex flex-col gap-1">
-                            <Link href="/lck" className={linkClass}>LCK</Link>
-                            <Link href="/lec" className={linkClass}>LEC</Link>
-                            <Link href="/lcs" className={linkClass}>LCS</Link>
-                            <Link href="/lpl" className={linkClass}>LPL</Link>
-                            <Link href="/lcp" className={linkClass}>LCP</Link>
+                        <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-1.5 px-3">Regions</p>
+                        <div className="flex flex-col gap-0.5">
+                            <Link href="/lck" onClick={onClose} className={linkClass}>LCK</Link>
+                            <Link href="/lec" onClick={onClose} className={linkClass}>LEC</Link>
+                            <Link href="/lcs" onClick={onClose} className={linkClass}>LCS</Link>
+                            <Link href="/lpl" onClick={onClose} className={linkClass}>LPL</Link>
+                            <Link href="/lcp" onClick={onClose} className={linkClass}>LCP</Link>
                         </div>
                     </div>
 
-                    {/* browse section */}
                     <div>
-                        <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Browse</p>
-                        <div className="flex flex-col gap-1">
-                            {/* add Teams and Players links */}
-                            <Link href="/teams" className={linkClass}>Teams</Link>
-                            <Link href="/players" className={linkClass}>Players</Link>
+                        <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-1.5 px-3">Browse</p>
+                        <div className="flex flex-col gap-0.5">
+                            <Link href="/teams" onClick={onClose} className={linkClass}>Teams</Link>
+                            <Link href="/players" onClick={onClose} className={linkClass}>Players</Link>
                         </div>
                     </div>
-                </div>
 
+                </div>
             </div>
         </>
     )

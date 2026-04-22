@@ -7,26 +7,48 @@ interface RecentMatchesProps {
 export default function RecentMatches({ matches }: RecentMatchesProps) {
     return (
         <div className="flex flex-col gap-2">
-        {matches.map((match) => (
-            <div key={match.id} className="bg-zinc-900 rounded-lg px-4 py-3">
-                <p className="text-xs text-zinc-500 mb-2">{match.tournament?.name}</p>
-                
-                <div className="grid grid-cols-3 items-center">
-                    <Link href={`/teams/${match.team_blue?.slug}`} className={`text-sm hover:underline ${match.winner_id === match.team_blue_id ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
-                        {match.team_blue?.name}
-                    </Link>
+            {matches.map((match, i) => {
+                const blueWon = match.winner_id === match.team_blue_id
+                const redWon  = match.winner_id === match.team_red_id
 
-                    <span className="text-sm text-zinc-400 font-mono text-center">
-                        {match.blue_score} - {match.red_score}
-                    </span>
+                return (
+                    <div
+                        key={match.id}
+                        className="animate-fade-in-up group bg-zinc-900 border border-zinc-800/60 rounded-xl px-5 py-4 hover:bg-zinc-800/50 hover:border-zinc-700 transition-all duration-200"
+                        style={{ animationDelay: `${i * 40}ms` }}
+                    >
+                        <p className="text-xs text-zinc-500 mb-3 uppercase tracking-wide font-medium">
+                            {match.tournament?.name}
+                        </p>
 
-                    <Link href={`/teams/${match.team_red?.slug}`} className={`text-sm text-right hover:underline ${match.winner_id === match.team_red_id ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
-                        {match.team_red?.name}
-                    </Link>
+                        <div className="flex items-center gap-3">
+                            <Link
+                                href={`/teams/${match.team_blue?.slug}`}
+                                className={`flex-1 text-sm font-medium transition-colors ${blueWon ? 'text-zinc-100 hover:text-white' : 'text-zinc-500 hover:text-zinc-400'}`}
+                            >
+                                {match.team_blue?.name}
+                            </Link>
 
-                </div>
-            </div>
-        ))}
+                            <div className="flex items-center gap-1.5 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 shrink-0">
+                                <span className={`text-sm font-mono font-semibold ${blueWon ? 'text-zinc-100' : 'text-zinc-500'}`}>
+                                    {match.blue_score}
+                                </span>
+                                <span className="text-xs text-zinc-600">–</span>
+                                <span className={`text-sm font-mono font-semibold ${redWon ? 'text-zinc-100' : 'text-zinc-500'}`}>
+                                    {match.red_score}
+                                </span>
+                            </div>
+
+                            <Link
+                                href={`/teams/${match.team_red?.slug}`}
+                                className={`flex-1 text-sm font-medium text-right transition-colors ${redWon ? 'text-zinc-100 hover:text-white' : 'text-zinc-500 hover:text-zinc-400'}`}
+                            >
+                                {match.team_red?.name}
+                            </Link>
+                        </div>
+                    </div>
+                )
+            })}
         </div>
     )
 }
