@@ -11,7 +11,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-// Leaguepedia name prefix → our DB region slug
 const LEAGUES = [
   { prefix: 'LCS 20', regionSlug: 'lcs' },
   { prefix: 'LEC 20', regionSlug: 'lec' },
@@ -123,11 +122,22 @@ async function getPlayerMap(): Promise<Record<string, string>> {
   return Object.fromEntries((data ?? []).map((p: any) => [p.summoner_name, p.id]))
 }
 
+// Returns the set of DB game UUIDs that already have player stats synced
+async function getGamesWithStats(): Promise<Set<string>> {
+  const { data } = await supabase
+    .from('player_game_stats')
+    .select('game_id')
+  return new Set((data ?? []).map((r: any) => r.game_id))
+}
+
 function resolvePlayer(link: string, playerMap: Record<string, string>): string | null {
   if (playerMap[link]) return playerMap[link]
-  // Strip parenthetical: "APA (Eain Stearns)" → "APA"
   const bare = link.split(' (')[0].trim()
   return playerMap[bare] ?? null
+}
+
+function splitChamps(s: string): string[] {
+  return s ? s.split(',').map(c => c.trim()).filter(Boolean) : []
 }
 
 // --- Sync ---
@@ -163,13 +173,13 @@ async function syncTournaments(cookies: string, regionMap: Record<string, string
     }
 
     const upsertRows = rows.map(r => ({
-      name: r.Name,
+      name:             r.Name,
       leaguepedia_name: r.Name,
-      region_id: regionMap[league.regionSlug],
-      season: r.Year,
-      split: deriveSplit(r.Name),
-      start_date: r.DateStart || null,
-      end_date: r.Date || null,
+      region_id:        regionMap[league.regionSlug],
+      season:           r.Year,
+      split:            deriveSplit(r.Name),
+      start_date:       r.DateStart || null,
+      end_date:         r.Date || null,
     }))
 
     const { error } = await supabase
@@ -179,18 +189,18 @@ async function syncTournaments(cookies: string, regionMap: Record<string, string
     if (error) console.error(`  ✗ ${league.prefix}:`, error.message)
     else console.log(`  ✓ ${upsertRows.length} tournaments for ${league.prefix}`)
   }
-
 }
 
 async function syncTournamentGames(
   lpName: string, tournamentDbId: string,
   teamMap: Record<string, string>,
   playerMap: Record<string, string>,
+  gamesWithStats: Set<string>,
   cookies: string,
 ) {
   const games = await cargoAll(
     'ScoreboardGames',
-    'Team1,Team2,Winner,Team1Score,Team2Score,DateTime_UTC,MatchId,Gamelength,N_GameInMatch,Patch,GameId',
+    'Team1,Team2,Winner,Team1Score,Team2Score,DateTime_UTC,MatchId,Gamelength,N_GameInMatch,Patch,GameId,Team1Picks,Team2Picks,Team1Bans,Team2Bans',
     `Tournament='${lpName.replace(/'/g, "\\'")}'`,
     cookies,
   )
@@ -207,7 +217,7 @@ async function syncTournamentGames(
     seriesMap.get(g.MatchId)!.push(g)
   }
 
-  let matchCount = 0, gameCount = 0, statCount = 0, skipCount = 0
+  let matchCount = 0, gameCount = 0, statCount = 0, skipCount = 0, statSkipCount = 0
 
   for (const [matchId, matchGames] of seriesMap) {
     matchGames.sort((a, b) => parseInt(a['N GameInMatch']) - parseInt(b['N GameInMatch']))
@@ -221,10 +231,9 @@ async function syncTournamentGames(
       continue
     }
 
-    const t1Score = parseInt(last.Team1Score) || 0
-    const t2Score = parseInt(last.Team2Score) || 0
-    const winnerId = t1Score > t2Score ? team1Id : team2Id
-
+    const t1Score   = parseInt(last.Team1Score) || 0
+    const t2Score   = parseInt(last.Team2Score) || 0
+    const winnerId  = t1Score > t2Score ? team1Id : team2Id
     const scheduledAt = first['DateTime UTC']
       ? new Date(first['DateTime UTC'] + ' UTC').toISOString()
       : null
@@ -232,14 +241,14 @@ async function syncTournamentGames(
     const { data: matchData, error: matchErr } = await supabase
       .from('matches')
       .upsert({
-        tournament_id: tournamentDbId,
-        team_blue_id:  team1Id,
-        team_red_id:   team2Id,
-        winner_id:     winnerId,
-        blue_score:    t1Score,
-        red_score:     t2Score,
-        scheduled_at:  scheduledAt,
-        status:        'completed',
+        tournament_id:  tournamentDbId,
+        team_blue_id:   team1Id,
+        team_red_id:    team2Id,
+        winner_id:      winnerId,
+        blue_score:     t1Score,
+        red_score:      t2Score,
+        scheduled_at:   scheduledAt,
+        status:         'completed',
         leaguepedia_id: matchId,
       }, { onConflict: 'leaguepedia_id' })
       .select('id')
@@ -249,9 +258,8 @@ async function syncTournamentGames(
     matchCount++
 
     for (const g of matchGames) {
-      const playedAt = g['DateTime UTC'] ? new Date(g['DateTime UTC'] + ' UTC').toISOString() : null
-
-      const winnerInt = parseInt(g.Winner) || null
+      const playedAt      = g['DateTime UTC'] ? new Date(g['DateTime UTC'] + ' UTC').toISOString() : null
+      const winnerInt     = parseInt(g.Winner) || null
       const winningTeamId = winnerInt === 1 ? team1Id : winnerInt === 2 ? team2Id : null
 
       const { data: gameData, error: gameErr } = await supabase
@@ -264,6 +272,10 @@ async function syncTournamentGames(
           duration_seconds:    gamelengthToSeconds(g.Gamelength),
           patch:               g.Patch || null,
           played_at:           playedAt,
+          team_blue_picks:     splitChamps(g.Team1Picks),
+          team_red_picks:      splitChamps(g.Team2Picks),
+          team_blue_bans:      splitChamps(g.Team1Bans),
+          team_red_bans:       splitChamps(g.Team2Bans),
         }, { onConflict: 'leaguepedia_game_id' })
         .select('id')
         .single()
@@ -271,18 +283,23 @@ async function syncTournamentGames(
       if (gameErr || !gameData) { console.log(`  ✗ game upsert: ${gameErr?.message}`); continue }
       gameCount++
 
-      // Player stats
+      // Skip player stats fetch if already synced for this game
+      if (gamesWithStats.has(gameData.id)) {
+        statSkipCount++
+        continue
+      }
+
       try {
         const n = await syncPlayerStats(g.GameId, gameData.id, teamMap, playerMap, cookies)
         statCount += n
       } catch (e: any) {
         console.log(`  ✗ player stats for ${g.GameId}: ${e.message}`)
       }
-      await delay(1200)
+      await delay(800)
     }
   }
 
-  console.log(`  ✓ ${matchCount} matches, ${gameCount} games, ${statCount} player rows  (${skipCount} series skipped — unknown teams)`)
+  console.log(`  ✓ ${matchCount} matches, ${gameCount} games, ${statCount} new stat rows, ${statSkipCount} already synced  (${skipCount} series skipped)`)
 }
 
 async function syncPlayerStats(
@@ -307,12 +324,12 @@ async function syncPlayerStats(
     side:        parseInt(p.Side) || null,
     role:        roleMap[p.IngameRole] ?? p.IngameRole?.toLowerCase() ?? null,
     champion:    p.Champion || null,
-    kills:        parseInt(p.Kills) || 0,
-    deaths:       parseInt(p.Deaths) || 0,
-    assists:      parseInt(p.Assists) || 0,
-    cs:           parseInt(p.CS) || 0,
-    gold_earned:  parseInt(p.Gold) || 0,
-    items:        p.Items ? p.Items.split(';').map((s: string) => s.trim()).filter(Boolean) : [],
+    kills:       parseInt(p.Kills)  || 0,
+    deaths:      parseInt(p.Deaths) || 0,
+    assists:     parseInt(p.Assists)|| 0,
+    cs:          parseInt(p.CS)     || 0,
+    gold_earned: parseInt(p.Gold)   || 0,
+    items:       p.Items ? p.Items.split(';').map((s: string) => s.trim()).filter(Boolean) : [],
   }))
 
   const { error } = await supabase
@@ -330,10 +347,10 @@ async function main() {
   const cookies = await authenticate()
   console.log('✓ Authenticated')
 
-  const [regionMap, teamMap, playerMap] = await Promise.all([
-    getRegionMap(), getTeamMap(), getPlayerMap(),
+  const [regionMap, teamMap, playerMap, gamesWithStats] = await Promise.all([
+    getRegionMap(), getTeamMap(), getPlayerMap(), getGamesWithStats(),
   ])
-  console.log(`  ${Object.keys(regionMap).length} regions, ${Object.keys(teamMap).length} teams, ${Object.keys(playerMap).length} players`)
+  console.log(`  ${Object.keys(regionMap).length} regions, ${Object.keys(teamMap).length} teams, ${Object.keys(playerMap).length} players, ${gamesWithStats.size} games already have stats`)
 
   await syncTournaments(cookies, regionMap)
 
@@ -354,7 +371,7 @@ async function main() {
   for (const t of tournaments) {
     console.log(`\n  ${t.leaguepedia_name}`)
     try {
-      await syncTournamentGames(t.leaguepedia_name, t.id, teamMap, playerMap, cookies)
+      await syncTournamentGames(t.leaguepedia_name, t.id, teamMap, playerMap, gamesWithStats, cookies)
     } catch (e: any) {
       console.error(`  ✗ ${e.message}`)
     }

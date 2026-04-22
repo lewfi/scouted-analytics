@@ -68,14 +68,59 @@ function GameRow({ game, match }: { game: any; match: any }) {
         </svg>
       </button>
 
-      {open && stats.length > 0 && (
-        <div className="px-4 pb-3">
-          <div className="rounded-lg overflow-hidden border border-zinc-800/60">
-            <StatsTable players={bluePlayers} teamName={match.team_blue?.name} won={blueWon} />
-            <StatsTable players={redPlayers} teamName={match.team_red?.name} won={redWon} />
-          </div>
+      {open && (
+        <div className="px-4 pb-3 space-y-2">
+          {/* Draft */}
+          {(game.team_blue_bans?.length > 0 || game.team_red_bans?.length > 0) && (
+            <div className="rounded-lg overflow-hidden border border-zinc-800/60">
+              <DraftRow
+                label="Bans"
+                blue={game.team_blue_bans ?? []}
+                red={game.team_red_bans ?? []}
+                blueTeam={match.team_blue?.name}
+                redTeam={match.team_red?.name}
+              />
+              {(game.team_blue_picks?.length > 0 || game.team_red_picks?.length > 0) && (
+                <DraftRow
+                  label="Picks"
+                  blue={game.team_blue_picks ?? []}
+                  red={game.team_red_picks ?? []}
+                  blueTeam={match.team_blue?.name}
+                  redTeam={match.team_red?.name}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Player stats */}
+          {stats.length > 0 && (
+            <div className="rounded-lg overflow-hidden border border-zinc-800/60">
+              <StatsTable players={bluePlayers} teamName={match.team_blue?.name} won={blueWon} />
+              <StatsTable players={redPlayers} teamName={match.team_red?.name} won={redWon} />
+            </div>
+          )}
         </div>
       )}
+    </div>
+  )
+}
+
+function DraftRow({ label, blue, red, blueTeam, redTeam }: {
+  label: string; blue: string[]; red: string[]; blueTeam: string; redTeam: string
+}) {
+  return (
+    <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2 px-3 py-2 border-b border-zinc-800/60 last:border-b-0">
+      <div className="flex flex-wrap gap-1">
+        {blue.map((c, i) => (
+          <span key={i} className="text-xs bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded font-medium">{c}</span>
+        ))}
+      </div>
+      <span className="text-xs text-zinc-600 font-medium w-10 text-center pt-0.5">{label}</span>
+      <div className="flex flex-wrap gap-1 justify-end">
+        {red.map((c, i) => (
+          <span key={i} className="text-xs bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded font-medium">{c}</span>
+        ))}
+      </div>
     </div>
   )
 }

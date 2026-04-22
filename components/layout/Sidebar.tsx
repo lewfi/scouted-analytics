@@ -54,8 +54,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <div>
                         <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-1.5 px-3">Browse</p>
                         <div className="flex flex-col gap-0.5">
-                            <Link href="/teams" onClick={onClose} className={linkClass}>Teams</Link>
-                            <Link href="/players" onClick={onClose} className={linkClass}>Players</Link>
+                            <Link href="/tournaments" onClick={onClose} className={linkClass}>Tournaments</Link>
+                            <Link href="/teams"       onClick={onClose} className={linkClass}>Teams</Link>
+                            <Link href="/players"     onClick={onClose} className={linkClass}>Players</Link>
                         </div>
                     </div>
 
