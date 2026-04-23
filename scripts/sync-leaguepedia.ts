@@ -11,14 +11,27 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
-const LEAGUES = [
-  { prefix: 'LCS 20',    regionSlug: 'lcs' },
-  { prefix: 'LEC 20',    regionSlug: 'lec' },
-  { prefix: 'LCK 20',    regionSlug: 'lck' },
-  { prefix: 'LPL 20',    regionSlug: 'lpl' },
-  { prefix: 'LCP 20',    regionSlug: 'lcp' },
-  { prefix: 'MSI 20',    regionSlug: 'intl' },
-  { prefix: 'Worlds 20', regionSlug: 'intl' },
+interface LeagueConfig {
+  label: string
+  where: string
+  regionSlug: string
+}
+
+const YEAR_FILTER = 'Year >= 2023'
+
+const LEAGUES: LeagueConfig[] = [
+  // Regional — consistent "LEAGUE YEAR ..." naming
+  { label: 'LCS',         where: `Name LIKE 'LCS 20%' AND ${YEAR_FILTER}`,                          regionSlug: 'lcs'  },
+  { label: 'LTA',         where: `Name LIKE 'LTA%' AND ${YEAR_FILTER}`,                             regionSlug: 'lcs'  }, // LTA replaced LCS in 2025
+  { label: 'LEC',         where: `Name LIKE 'LEC 20%' AND ${YEAR_FILTER}`,                          regionSlug: 'lec'  },
+  { label: 'LCK',         where: `Name LIKE 'LCK 20%' AND ${YEAR_FILTER}`,                          regionSlug: 'lck'  },
+  { label: 'LPL',         where: `Name LIKE 'LPL 20%' AND ${YEAR_FILTER}`,                          regionSlug: 'lpl'  },
+  { label: 'LCP',         where: `Name LIKE 'LCP 20%' AND ${YEAR_FILTER}`,                          regionSlug: 'lcp'  },
+  // International — Leaguepedia uses "YEAR Event Name" format
+  { label: 'MSI',         where: `Name LIKE '%Mid-Season Invitational%' AND ${YEAR_FILTER}`,        regionSlug: 'intl' },
+  { label: 'Worlds',      where: `Name LIKE '%Season World Championship%' AND ${YEAR_FILTER}`,      regionSlug: 'intl' },
+  { label: 'First Stand', where: `Name LIKE '%First Stand%' AND ${YEAR_FILTER}`,                    regionSlug: 'intl' },
+  { label: 'EWC',         where: `Name LIKE '%Esports World Cup%' AND ${YEAR_FILTER}`,              regionSlug: 'intl' },
 ]
 
 const roleMap: Record<string, string> = {
@@ -166,11 +179,11 @@ async function syncTournaments(cookies: string, regionMap: Record<string, string
     const rows = await cargoAll(
       'Tournaments',
       'Name,DateStart,Date,Year',
-      `Name LIKE '${league.prefix}%' AND Year >= 2023`,
+      league.where,
       cookies,
     )
     if (rows.length === 0) {
-      console.log(`  ⚠  No tournaments found for ${league.prefix}`)
+      console.log(`  ⚠  No tournaments found for ${league.label}`)
       continue
     }
 
@@ -188,8 +201,8 @@ async function syncTournaments(cookies: string, regionMap: Record<string, string
       .from('tournaments')
       .upsert(upsertRows, { onConflict: 'name' })
 
-    if (error) console.error(`  ✗ ${league.prefix}:`, error.message)
-    else console.log(`  ✓ ${upsertRows.length} tournaments for ${league.prefix}`)
+    if (error) console.error(`  ✗ ${league.label}:`, error.message)
+    else console.log(`  ✓ ${upsertRows.length} tournaments for ${league.label}`)
   }
 }
 
@@ -211,13 +224,16 @@ async function syncTournamentGames(
     ),
     cargoAll(
       'MatchSchedule',
-      'MatchId,Phase',
+      'MatchId,Tab,Phase',
       `Tournament='${lpName.replace(/'/g, "\\'")}'`,
       cookies,
     ).catch(() => [] as Record<string, string>[]),
   ])
 
-  const phaseByMatchId = new Map(scheduleRows.map(r => [r.MatchId, r.Phase?.trim() || null]))
+  // Tab = round/bracket tab name (e.g. "Round 1", "Finals"); Phase = higher-level phase
+  const phaseByMatchId = new Map(
+    scheduleRows.map(r => [r.MatchId, (r.Tab || r.Phase)?.trim() || null])
+  )
 
   if (games.length === 0) {
     console.log(`  (no games yet)`)
