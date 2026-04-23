@@ -5,12 +5,7 @@ import { useEffect, useState } from 'react'
 export default function ThemeToggle() {
   const [isDark, setIsDark] = useState(true)
 
-  useEffect(() => {
-    const stored = localStorage.getItem('scouted-theme')
-    if (stored === 'light') apply('light')
-  }, [])
-
-  function apply(mode: 'dark' | 'light') {
+  const apply = (mode: 'dark' | 'light') => {
     const html = document.documentElement
     if (mode === 'light') {
       html.classList.add('light')
@@ -20,6 +15,11 @@ export default function ThemeToggle() {
     localStorage.setItem('scouted-theme', mode)
     setIsDark(mode === 'dark')
   }
+
+  useEffect(() => {
+    const stored = localStorage.getItem('scouted-theme')
+    if (stored === 'light') apply('light')
+  }, [])
 
   return (
     <button

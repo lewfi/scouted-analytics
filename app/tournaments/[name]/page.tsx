@@ -165,7 +165,7 @@ export default async function TournamentPage({ params }: { params: Promise<{ nam
                 </tr>
               </thead>
               <tbody>
-                {champStats.slice(0, 15).map((c, i) => (
+                {champStats.slice(0, 15).map((c) => (
                   <tr key={c.name} className="border-t border-zinc-800/40 hover:bg-zinc-800/20 transition-colors">
                     <td className="px-4 py-2.5 font-medium text-zinc-200">{c.name}</td>
                     <td className="px-4 py-2.5 text-center font-mono text-zinc-400">{c.games}</td>

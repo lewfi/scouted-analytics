@@ -59,7 +59,7 @@ export default async function PlayersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {activePlayers.map((p: any, i: number) => (
+                    {activePlayers.map((p: any) => (
                       <tr key={p.id} className="border-t border-zinc-800/40 hover:bg-zinc-800/20 transition-colors">
                         <td className="px-4 py-2.5">
                           <Link
