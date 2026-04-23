@@ -132,6 +132,43 @@ async function getTeamMap(): Promise<Record<string, string>> {
   return Object.fromEntries((data ?? []).map((t: any) => [t.name, t.id]))
 }
 
+// Looks up a team by name; auto-creates it if missing so no matches are skipped
+async function ensureTeam(
+  name: string,
+  regionId: string,
+  teamMap: Record<string, string>,
+): Promise<string | null> {
+  if (teamMap[name]) return teamMap[name]
+
+  // Check if it exists under a slightly different key (shouldn't happen, but safe)
+  const { data: existing } = await supabase
+    .from('teams').select('id').eq('name', name).maybeSingle()
+  if (existing) {
+    teamMap[name] = existing.id
+    return existing.id
+  }
+
+  const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '') || name.slice(0, 20)
+  const { data: created, error } = await supabase
+    .from('teams')
+    .insert({ name, slug, short_name: name.slice(0, 10), region_id: regionId, is_active: false, tier: 1 })
+    .select('id')
+    .single()
+
+  if (error) {
+    // Slug conflict — fetch the colliding row
+    const { data: fallback } = await supabase
+      .from('teams').select('id').eq('slug', slug).maybeSingle()
+    if (fallback) { teamMap[name] = fallback.id; return fallback.id }
+    console.log(`  ⚠ Could not create team "${name}": ${error.message}`)
+    return null
+  }
+
+  teamMap[name] = created.id
+  console.log(`  + auto-created team "${name}"`)
+  return created.id
+}
+
 async function getPlayerMap(): Promise<Record<string, string>> {
   const { data } = await supabase.from('players').select('id, summoner_name')
   return Object.fromEntries((data ?? []).map((p: any) => [p.summoner_name, p.id]))
@@ -207,7 +244,7 @@ async function syncTournaments(cookies: string, regionMap: Record<string, string
 }
 
 async function syncTournamentGames(
-  lpName: string, tournamentDbId: string,
+  lpName: string, tournamentDbId: string, tournamentRegionId: string,
   teamMap: Record<string, string>,
   playerMap: Record<string, string>,
   gamesWithStats: Set<string>,
@@ -254,8 +291,8 @@ async function syncTournamentGames(
     const first = matchGames[0]
     const last  = matchGames[matchGames.length - 1]
 
-    const team1Id = teamMap[first.Team1]
-    const team2Id = teamMap[first.Team2]
+    const team1Id = await ensureTeam(first.Team1, tournamentRegionId, teamMap)
+    const team2Id = await ensureTeam(first.Team2, tournamentRegionId, teamMap)
     if (!team1Id || !team2Id) {
       skipCount++
       continue
@@ -411,7 +448,7 @@ async function main() {
 
   const { data: tournaments } = await supabase
     .from('tournaments')
-    .select('id, name, leaguepedia_name')
+    .select('id, name, leaguepedia_name, region_id')
     .not('leaguepedia_name', 'is', null)
     .order('name')
 
@@ -427,7 +464,7 @@ async function main() {
   for (const t of tournaments) {
     console.log(`\n  ${t.leaguepedia_name}`)
     try {
-      await syncTournamentGames(t.leaguepedia_name, t.id, teamMap, playerMap, gamesWithStats, cookies, tier1Teams, tier1Players)
+      await syncTournamentGames(t.leaguepedia_name, t.id, t.region_id, teamMap, playerMap, gamesWithStats, cookies, tier1Teams, tier1Players)
     } catch (e: any) {
       console.error(`  ✗ ${e.message}`)
     }

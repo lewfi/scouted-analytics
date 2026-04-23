@@ -72,6 +72,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               {navLink('/lcs', 'LCS', true)}
               {navLink('/lpl', 'LPL', true)}
               {navLink('/lcp', 'LCP', true)}
+              {navLink('/intl', 'International', true)}
             </div>
           </div>
 

@@ -10,7 +10,6 @@ export default async function TournamentsPage() {
       id, name, short_name, slug,
       tournaments(id, name, start_date, end_date, season)
     `)
-    .neq('slug', 'intl')
     .order('name')
 
   const fmt = (d: string | null) =>
@@ -23,7 +22,11 @@ export default async function TournamentsPage() {
       <h1 className="text-2xl font-bold text-zinc-100 tracking-tight mb-8">Tournaments</h1>
 
       <div className="flex flex-col gap-10">
-        {(regions ?? []).map((region: any) => {
+        {(regions ?? []).slice().sort((a: any, b: any) => {
+          if (a.slug === 'intl') return 1
+          if (b.slug === 'intl') return -1
+          return 0
+        }).map((region: any) => {
           const tournaments = (region.tournaments ?? []).sort((a: any, b: any) =>
             new Date(b.start_date ?? 0).getTime() - new Date(a.start_date ?? 0).getTime()
           )
