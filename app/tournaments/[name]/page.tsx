@@ -3,7 +3,7 @@ import SeriesAccordion from '@/components/tournaments/SeriesAccordion'
 import BracketView from '@/components/tournaments/BracketView'
 import Link from 'next/link'
 
-const BRACKET_STAGE_PATTERNS = /final|semifinal|semi-final|quarterfinal|quarter-final|round of \d|tiebreaker|bracket|knockout/i
+const BRACKET_STAGE_PATTERNS = /final|semifinal|semi-final|quarterfinal|quarter-final|round of \d|^round \d|tiebreaker|bracket|knockout/i
 
 function hasBracketStages(matches: any[]): boolean {
   return matches.some((m: any) => m.stage && BRACKET_STAGE_PATTERNS.test(m.stage))

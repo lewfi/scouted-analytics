@@ -1,14 +1,5 @@
 import SeriesAccordion from './SeriesAccordion'
 
-// Stages in display order (Finals first — most important match at the top)
-const STAGE_ORDER = [
-  'Finals', 'Grand Finals', 'Final',
-  'Semifinals', 'Semi-Finals', 'Semifinal',
-  'Quarterfinals', 'Quarter-Finals', 'Quarterfinal',
-  'Round of 8', 'Round of 16', 'Round of 32',
-  'Tiebreakers', 'Tiebreaker',
-]
-
 function normalizeStage(stage: string): string {
   if (/grand.?final/i.test(stage))   return 'Finals'
   if (/^final/i.test(stage))         return 'Finals'
@@ -19,6 +10,20 @@ function normalizeStage(stage: string): string {
   if (/round of 32/i.test(stage))    return 'Round of 32'
   if (/tiebreaker/i.test(stage))     return 'Tiebreakers'
   return stage
+}
+
+// Returns a sort index — lower = displayed first (Finals at top)
+function stageIndex(stage: string): number {
+  const fixed: Record<string, number> = {
+    'Finals': 0, 'Semifinals': 1, 'Quarterfinals': 2,
+    'Round of 8': 3, 'Round of 16': 4, 'Round of 32': 5,
+    'Tiebreakers': 6,
+  }
+  if (fixed[stage] !== undefined) return fixed[stage]
+  // "Round N" format (LCK playoffs): higher round number = earlier display
+  const m = stage.match(/^round\s+(\d+)$/i)
+  if (m) return 100 - parseInt(m[1])
+  return 999
 }
 
 const GRID_COLS: Record<string, string> = {
@@ -39,21 +44,13 @@ export default function BracketView({ matches }: { matches: any[] }) {
     grouped.get(key)!.push(m)
   }
 
-  // Sort stages by defined order; unknown stages go last
-  const sortedStages = [...grouped.keys()].sort((a, b) => {
-    const ai = STAGE_ORDER.indexOf(a)
-    const bi = STAGE_ORDER.indexOf(b)
-    if (ai === -1 && bi === -1) return 0
-    if (ai === -1) return 1
-    if (bi === -1) return -1
-    return ai - bi
-  })
+  const sortedStages = [...grouped.keys()].sort((a, b) => stageIndex(a) - stageIndex(b))
 
   return (
     <div className="flex flex-col gap-8">
       {sortedStages.map((stage) => {
         const stageMatches = grouped.get(stage)!
-        const cols = GRID_COLS[stage] ?? 'grid-cols-1 sm:grid-cols-2'
+        const cols = GRID_COLS[stage] ?? (/^round \d/i.test(stage) ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2')
         const isFinal = stage === 'Finals'
 
         return (
