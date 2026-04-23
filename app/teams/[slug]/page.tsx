@@ -76,16 +76,20 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
 
   const { topPicks, topBans } = computeDraftTendencies(tournamentMatches, team?.id)
 
-  const h2hMap = new Map<string, { opponent: any; wins: number; losses: number }>()
-  for (const m of tournamentMatches as any[]) {
+  type H2HEntry = { opponent: any; wins: number; losses: number; recent: boolean[] }
+  const h2hMap = new Map<string, H2HEntry>()
+  for (const m of (matches ?? []).slice().reverse() as any[]) {
     const isBlue   = m.team_blue_id === team?.id
     const opponent = isBlue ? m.team_red : m.team_blue
     if (!opponent?.id) continue
-    if (!h2hMap.has(opponent.id)) h2hMap.set(opponent.id, { opponent, wins: 0, losses: 0 })
+    if (!h2hMap.has(opponent.id)) h2hMap.set(opponent.id, { opponent, wins: 0, losses: 0, recent: [] })
     const entry = h2hMap.get(opponent.id)!
-    if (m.winner_id === team?.id) entry.wins++
-    else entry.losses++
+    const won = m.winner_id === team?.id
+    if (won) entry.wins++; else entry.losses++
+    entry.recent.push(won)
   }
+  // recent array is oldest→newest; keep last 5, then reverse so index 0 = most recent
+  for (const e of h2hMap.values()) e.recent = e.recent.slice(-5).reverse()
   const h2h = [...h2hMap.values()].sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses))
 
   const activePlayers = (team?.players ?? [])
@@ -173,9 +177,7 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
       {/* Head-to-Head */}
       {h2h.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-3">
-            Head-to-Head — {mostRecentTournament?.name}
-          </h2>
+          <h2 className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-3">Head-to-Head</h2>
           <div className="border border-zinc-800/60 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -183,27 +185,42 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
                   <th className="text-left px-4 py-2.5 font-medium">Opponent</th>
                   <th className="text-center px-4 py-2.5 font-medium">W</th>
                   <th className="text-center px-4 py-2.5 font-medium">L</th>
-                  <th className="text-center px-4 py-2.5 font-medium hidden sm:table-cell">Record</th>
+                  <th className="text-center px-4 py-2.5 font-medium hidden sm:table-cell">W%</th>
+                  <th className="text-right px-4 py-2.5 font-medium hidden sm:table-cell">Recent</th>
                 </tr>
               </thead>
               <tbody>
-                {h2h.map((entry) => (
-                  <tr key={entry.opponent.id} className="border-t border-zinc-800/40 hover:bg-zinc-800/20 transition-colors">
-                    <td className="px-4 py-2.5">
-                      <Link href={`/teams/${entry.opponent.slug}`} className="font-medium text-zinc-200 hover:text-white transition-colors">
-                        {entry.opponent.name}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-2.5 text-center font-mono text-green-400">{entry.wins}</td>
-                    <td className="px-4 py-2.5 text-center font-mono text-red-400">{entry.losses}</td>
-                    <td className="px-4 py-2.5 text-center font-mono text-zinc-500 hidden sm:table-cell">
-                      {entry.wins}-{entry.losses}
-                    </td>
-                  </tr>
-                ))}
+                {h2h.map((entry) => {
+                  const total = entry.wins + entry.losses
+                  const pct   = total > 0 ? ((entry.wins / total) * 100).toFixed(0) : '—'
+                  return (
+                    <tr key={entry.opponent.id} className="border-t border-zinc-800/40 hover:bg-zinc-800/20 transition-colors">
+                      <td className="px-4 py-2.5">
+                        <Link href={`/teams/${entry.opponent.slug}`} className="font-medium text-zinc-200 hover:text-white transition-colors">
+                          {entry.opponent.name}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-2.5 text-center font-mono text-green-400">{entry.wins}</td>
+                      <td className="px-4 py-2.5 text-center font-mono text-red-400">{entry.losses}</td>
+                      <td className="px-4 py-2.5 text-center font-mono text-zinc-400 hidden sm:table-cell">{pct}%</td>
+                      <td className="px-4 py-2.5 hidden sm:table-cell">
+                        <div className="flex items-center justify-end gap-1">
+                          {entry.recent.map((won, i) => (
+                            <span
+                              key={i}
+                              className={`w-2 h-2 rounded-full ${won ? 'bg-green-500' : 'bg-red-500'}`}
+                              title={won ? 'Win' : 'Loss'}
+                            />
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
+          <p className="text-xs text-zinc-600 mt-2 text-right">All-time · dots = last 5 series (newest left)</p>
         </div>
       )}
 

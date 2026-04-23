@@ -53,11 +53,13 @@ export default function SearchModal({ isOpen, onClose }: { isOpen: boolean; onCl
           .from('players')
           .select('id, summoner_name, role, team:teams(name, slug)')
           .ilike('summoner_name', q)
+          .eq('tier', 1)
           .limit(5),
         supabase
           .from('teams')
           .select('id, name, slug')
           .ilike('name', q)
+          .eq('tier', 1)
           .limit(5),
         supabase
           .from('tournaments')

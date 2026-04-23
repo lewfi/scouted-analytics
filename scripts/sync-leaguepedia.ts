@@ -12,11 +12,13 @@ const supabase = createClient(
 )
 
 const LEAGUES = [
-  { prefix: 'LCS 20', regionSlug: 'lcs' },
-  { prefix: 'LEC 20', regionSlug: 'lec' },
-  { prefix: 'LCK 20', regionSlug: 'lck' },
-  { prefix: 'LPL 20', regionSlug: 'lpl' },
-  { prefix: 'LCP 20', regionSlug: 'lcp' },
+  { prefix: 'LCS 20',    regionSlug: 'lcs' },
+  { prefix: 'LEC 20',    regionSlug: 'lec' },
+  { prefix: 'LCK 20',    regionSlug: 'lck' },
+  { prefix: 'LPL 20',    regionSlug: 'lpl' },
+  { prefix: 'LCP 20',    regionSlug: 'lcp' },
+  { prefix: 'MSI 20',    regionSlug: 'intl' },
+  { prefix: 'Worlds 20', regionSlug: 'intl' },
 ]
 
 const roleMap: Record<string, string> = {
@@ -164,7 +166,7 @@ async function syncTournaments(cookies: string, regionMap: Record<string, string
     const rows = await cargoAll(
       'Tournaments',
       'Name,DateStart,Date,Year',
-      `Name LIKE '${league.prefix}%' AND (Year=2025 OR Year=2026)`,
+      `Name LIKE '${league.prefix}%' AND Year >= 2023`,
       cookies,
     )
     if (rows.length === 0) {
@@ -197,13 +199,25 @@ async function syncTournamentGames(
   playerMap: Record<string, string>,
   gamesWithStats: Set<string>,
   cookies: string,
+  tier1Teams: Set<string>,
+  tier1Players: Set<string>,
 ) {
-  const games = await cargoAll(
-    'ScoreboardGames',
-    'Team1,Team2,Winner,Team1Score,Team2Score,DateTime_UTC,MatchId,Gamelength,N_GameInMatch,Patch,GameId,Team1Picks,Team2Picks,Team1Bans,Team2Bans',
-    `Tournament='${lpName.replace(/'/g, "\\'")}'`,
-    cookies,
-  )
+  const [games, scheduleRows] = await Promise.all([
+    cargoAll(
+      'ScoreboardGames',
+      'Team1,Team2,Winner,Team1Score,Team2Score,DateTime_UTC,MatchId,Gamelength,N_GameInMatch,Patch,GameId,Team1Picks,Team2Picks,Team1Bans,Team2Bans',
+      `Tournament='${lpName.replace(/'/g, "\\'")}'`,
+      cookies,
+    ),
+    cargoAll(
+      'MatchSchedule',
+      'MatchId,Phase',
+      `Tournament='${lpName.replace(/'/g, "\\'")}'`,
+      cookies,
+    ).catch(() => [] as Record<string, string>[]),
+  ])
+
+  const phaseByMatchId = new Map(scheduleRows.map(r => [r.MatchId, r.Phase?.trim() || null]))
 
   if (games.length === 0) {
     console.log(`  (no games yet)`)
@@ -230,6 +244,8 @@ async function syncTournamentGames(
       skipCount++
       continue
     }
+    tier1Teams.add(first.Team1)
+    tier1Teams.add(first.Team2)
 
     const t1Score   = parseInt(last.Team1Score) || 0
     const t2Score   = parseInt(last.Team2Score) || 0
@@ -250,6 +266,7 @@ async function syncTournamentGames(
         scheduled_at:   scheduledAt,
         status:         'completed',
         leaguepedia_id: matchId,
+        stage:          phaseByMatchId.get(matchId) ?? null,
       }, { onConflict: 'leaguepedia_id' })
       .select('id')
       .single()
@@ -290,7 +307,7 @@ async function syncTournamentGames(
       }
 
       try {
-        const n = await syncPlayerStats(g.GameId, gameData.id, teamMap, playerMap, cookies)
+        const n = await syncPlayerStats(g.GameId, gameData.id, teamMap, playerMap, cookies, tier1Players)
         statCount += n
       } catch (e: any) {
         console.log(`  ✗ player stats for ${g.GameId}: ${e.message}`)
@@ -307,6 +324,7 @@ async function syncPlayerStats(
   teamMap: Record<string, string>,
   playerMap: Record<string, string>,
   cookies: string,
+  tier1Players: Set<string>,
 ): Promise<number> {
   const rows = await cargoAll(
     'ScoreboardPlayers',
@@ -315,6 +333,11 @@ async function syncPlayerStats(
     cookies,
   )
   if (rows.length === 0) return 0
+
+  for (const p of rows) {
+    const name = p.Link.split(' (')[0].trim()
+    if (name) tier1Players.add(name)
+  }
 
   const stats = rows.map(p => ({
     game_id:     gameDbId,
@@ -338,6 +361,20 @@ async function syncPlayerStats(
 
   if (error) throw new Error(error.message)
   return stats.length
+}
+
+async function markTier1(tier1Teams: Set<string>, tier1Players: Set<string>) {
+  console.log('\n=== Marking Tier 1 entities ===')
+  if (tier1Teams.size > 0) {
+    const { error } = await supabase.from('teams').update({ tier: 1 }).in('name', [...tier1Teams])
+    if (error) console.error('  ✗ teams tier update:', error.message)
+    else console.log(`  ✓ ${tier1Teams.size} teams marked tier 1`)
+  }
+  if (tier1Players.size > 0) {
+    const { error } = await supabase.from('players').update({ tier: 1 }).in('summoner_name', [...tier1Players])
+    if (error) console.error('  ✗ players tier update:', error.message)
+    else console.log(`  ✓ ${tier1Players.size} players marked tier 1`)
+  }
 }
 
 // --- Main ---
@@ -367,16 +404,21 @@ async function main() {
     return
   }
 
+  const tier1Teams:   Set<string> = new Set()
+  const tier1Players: Set<string> = new Set()
+
   console.log(`\n=== Syncing games for ${tournaments.length} tournaments ===`)
   for (const t of tournaments) {
     console.log(`\n  ${t.leaguepedia_name}`)
     try {
-      await syncTournamentGames(t.leaguepedia_name, t.id, teamMap, playerMap, gamesWithStats, cookies)
+      await syncTournamentGames(t.leaguepedia_name, t.id, teamMap, playerMap, gamesWithStats, cookies, tier1Teams, tier1Players)
     } catch (e: any) {
       console.error(`  ✗ ${e.message}`)
     }
     await delay(700)
   }
+
+  await markTier1(tier1Teams, tier1Players)
 
   console.log('\n✓ Sync complete.')
 }

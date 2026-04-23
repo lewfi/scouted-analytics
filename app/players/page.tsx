@@ -14,8 +14,8 @@ export default async function PlayersPage() {
     .select(`
       id, name, short_name, slug,
       teams!inner(
-        id, name, slug, is_active,
-        players(id, summoner_name, role, is_active)
+        id, name, slug, is_active, tier,
+        players(id, summoner_name, role, is_active, tier)
       )
     `)
     .neq('slug', 'intl')
@@ -28,10 +28,10 @@ export default async function PlayersPage() {
       <div className="flex flex-col gap-10">
         {(regions ?? []).map((region: any) => {
           const activePlayers = region.teams
-            .filter((t: any) => t.is_active)
+            .filter((t: any) => t.is_active && t.tier === 1)
             .flatMap((t: any) =>
               (t.players ?? [])
-                .filter((p: any) => p.is_active)
+                .filter((p: any) => p.is_active && p.tier === 1)
                 .map((p: any) => ({ ...p, team: { name: t.name, slug: t.slug } }))
             )
             .sort((a: any, b: any) => roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role))

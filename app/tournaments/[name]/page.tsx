@@ -1,6 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import SeriesAccordion from '@/components/tournaments/SeriesAccordion'
+import BracketView from '@/components/tournaments/BracketView'
 import Link from 'next/link'
+
+const BRACKET_STAGE_PATTERNS = /final|semifinal|semi-final|quarterfinal|quarter-final|round of \d|tiebreaker|bracket|knockout/i
+
+function hasBracketStages(matches: any[]): boolean {
+  return matches.some((m: any) => m.stage && BRACKET_STAGE_PATTERNS.test(m.stage))
+}
 
 function computeStandings(matches: any[]) {
   const map = new Map<string, { team: any; wins: number; losses: number }>()
@@ -57,7 +64,7 @@ export default async function TournamentPage({ params }: { params: Promise<{ nam
       id, name, start_date, end_date, season,
       region:regions(name, slug),
       matches(
-        id, team_blue_id, team_red_id, winner_id, blue_score, red_score, scheduled_at,
+        id, team_blue_id, team_red_id, winner_id, blue_score, red_score, scheduled_at, stage,
         team_blue:teams!matches_team_blue_id_fkey(id, name, short_name, slug),
         team_red:teams!matches_team_red_id_fkey(id, name, short_name, slug),
         winner:teams!matches_winner_id_fkey(id, name, short_name, slug),
@@ -82,6 +89,16 @@ export default async function TournamentPage({ params }: { params: Promise<{ nam
   const allMatches = (tournament.matches ?? []).sort((a: any, b: any) =>
     new Date(b.scheduled_at ?? 0).getTime() - new Date(a.scheduled_at ?? 0).getTime()
   )
+
+  const isBracket = hasBracketStages(allMatches)
+
+  // For bracket tournaments: split into group-stage matches and bracket matches
+  const bracketMatches = isBracket
+    ? allMatches.filter((m: any) => m.stage && BRACKET_STAGE_PATTERNS.test(m.stage))
+    : []
+  const listMatches = isBracket
+    ? allMatches.filter((m: any) => !m.stage || !BRACKET_STAGE_PATTERNS.test(m.stage))
+    : allMatches
 
   const standings  = computeStandings(completedMatches)
   const champStats = computeChampStats(completedMatches)
@@ -188,21 +205,33 @@ export default async function TournamentPage({ params }: { params: Promise<{ nam
         </div>
       )}
 
-      {/* Matches */}
-      <div>
-        <h2 className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-3">Matches</h2>
-        {allMatches.length === 0 ? (
-          <p className="text-sm text-zinc-500">No completed matches yet.</p>
-        ) : (
+      {/* Bracket */}
+      {isBracket && bracketMatches.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-4">Bracket</h2>
+          <BracketView matches={bracketMatches} />
+        </div>
+      )}
+
+      {/* Matches (group stage or all matches for non-bracket tournaments) */}
+      {listMatches.length > 0 && (
+        <div>
+          <h2 className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-3">
+            {isBracket ? 'Group Stage' : 'Matches'}
+          </h2>
           <div className="flex flex-col gap-2">
-            {allMatches.map((match: any, i: number) => (
+            {listMatches.map((match: any, i: number) => (
               <div key={match.id} className="animate-fade-in-up" style={{ animationDelay: `${i * 20}ms` }}>
                 <SeriesAccordion match={match} />
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {allMatches.length === 0 && (
+        <p className="text-sm text-zinc-500">No matches yet.</p>
+      )}
 
     </div>
   )
