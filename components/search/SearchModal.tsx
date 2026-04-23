@@ -84,7 +84,7 @@ export default function SearchModal({ isOpen, onClose }: { isOpen: boolean; onCl
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl overflow-hidden"
+        className="w-full max-w-lg bg-zinc-900 border border-zinc-800/60 rounded-2xl shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Input row */}
@@ -103,7 +103,7 @@ export default function SearchModal({ isOpen, onClose }: { isOpen: boolean; onCl
           {loading && (
             <div className="w-3.5 h-3.5 border-2 border-zinc-600 border-t-zinc-400 rounded-full animate-spin shrink-0" />
           )}
-          <kbd className="text-xs text-zinc-600 border border-zinc-700 rounded px-1.5 py-0.5 shrink-0">Esc</kbd>
+          <kbd className="text-xs text-zinc-600 border border-zinc-800 rounded px-1.5 py-0.5 shrink-0">Esc</kbd>
         </div>
 
         {/* Results */}

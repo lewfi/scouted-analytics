@@ -6,6 +6,41 @@ const roleLabel: Record<string, string> = {
   top: 'Top', jungle: 'Jungle', mid: 'Mid', bot: 'Bot', support: 'Support',
 }
 
+function computeDraftTendencies(matches: any[], teamId: string) {
+  const pickMap = new Map<string, { count: number; wins: number }>()
+  const banMap  = new Map<string, { count: number }>()
+
+  for (const m of matches) {
+    const isBlue = m.team_blue_id === teamId
+    for (const g of m.games ?? []) {
+      const picks = (isBlue ? g.team_blue_picks : g.team_red_picks) ?? []
+      const bans  = (isBlue ? g.team_blue_bans  : g.team_red_bans)  ?? []
+      const won   = g.winning_team_id === teamId
+
+      for (const champ of picks) {
+        const cur = pickMap.get(champ) ?? { count: 0, wins: 0 }
+        pickMap.set(champ, { count: cur.count + 1, wins: cur.wins + (won ? 1 : 0) })
+      }
+      for (const champ of bans) {
+        const cur = banMap.get(champ) ?? { count: 0 }
+        banMap.set(champ, { count: cur.count + 1 })
+      }
+    }
+  }
+
+  const topPicks = [...pickMap.entries()]
+    .map(([name, d]) => ({ name, ...d, winRate: d.count > 0 ? (d.wins / d.count) * 100 : 0 }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
+
+  const topBans = [...banMap.entries()]
+    .map(([name, d]) => ({ name, ...d }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
+
+  return { topPicks, topBans }
+}
+
 export default async function TeamPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const supabase = await createClient()
@@ -22,7 +57,12 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
       id, winner_id, team_blue_id, team_red_id, scheduled_at,
       tournament:tournaments(id, name, season),
       team_blue:teams!matches_team_blue_id_fkey(id, name, slug),
-      team_red:teams!matches_team_red_id_fkey(id, name, slug)
+      team_red:teams!matches_team_red_id_fkey(id, name, slug),
+      games(
+        id, winning_team_id,
+        team_blue_picks, team_red_picks,
+        team_blue_bans,  team_red_bans
+      )
     `)
     .or(`team_blue_id.eq.${team?.id},team_red_id.eq.${team?.id}`)
     .eq('status', 'completed')
@@ -34,7 +74,8 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
   const wins   = tournamentMatches.filter((m: any) => m.winner_id === team?.id).length
   const losses = tournamentMatches.length - wins
 
-  // Head-to-head: all-time record vs each opponent (from tournament matches)
+  const { topPicks, topBans } = computeDraftTendencies(tournamentMatches, team?.id)
+
   const h2hMap = new Map<string, { opponent: any; wins: number; losses: number }>()
   for (const m of tournamentMatches as any[]) {
     const isBlue   = m.team_blue_id === team?.id
@@ -45,18 +86,16 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
     if (m.winner_id === team?.id) entry.wins++
     else entry.losses++
   }
-  const h2h = [...h2hMap.values()].sort((a, b) => {
-    const aTotal = a.wins + a.losses
-    const bTotal = b.wins + b.losses
-    return bTotal - aTotal
-  })
+  const h2h = [...h2hMap.values()].sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses))
 
   const activePlayers = (team?.players ?? [])
     .filter((p: any) => p.is_active)
     .sort((a: any, b: any) => roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role))
 
+  const hasDraftData = topPicks.length > 0 || topBans.length > 0
+
   return (
-    <div className="p-8 max-w-2xl animate-fade-in">
+    <div className="px-6 py-10 max-w-2xl mx-auto animate-fade-in">
 
       {/* Header */}
       <div className="mb-8">
@@ -86,7 +125,52 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
         </div>
       )}
 
-      {/* Head-to-head */}
+      {/* Draft Tendencies */}
+      {hasDraftData && (
+        <div className="mb-8">
+          <h2 className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-3">
+            Draft Tendencies — {mostRecentTournament?.name}
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Picks */}
+            <div className="border border-zinc-800/60 rounded-xl overflow-hidden">
+              <div className="px-4 py-2.5 bg-zinc-900/50 border-b border-zinc-800/60">
+                <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">Top Picks</p>
+              </div>
+              <div className="divide-y divide-zinc-800/40">
+                {topPicks.map((p) => (
+                  <div key={p.name} className="flex items-center justify-between px-4 py-2 hover:bg-zinc-800/20 transition-colors">
+                    <span className="text-sm font-medium text-zinc-200">{p.name}</span>
+                    <div className="flex items-center gap-2 text-xs font-mono">
+                      <span className="text-zinc-500">{p.count}g</span>
+                      <span className={p.winRate >= 50 ? 'text-green-400' : 'text-red-400'}>
+                        {p.winRate.toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bans */}
+            <div className="border border-zinc-800/60 rounded-xl overflow-hidden">
+              <div className="px-4 py-2.5 bg-zinc-900/50 border-b border-zinc-800/60">
+                <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">Top Bans</p>
+              </div>
+              <div className="divide-y divide-zinc-800/40">
+                {topBans.map((b) => (
+                  <div key={b.name} className="flex items-center justify-between px-4 py-2 hover:bg-zinc-800/20 transition-colors">
+                    <span className="text-sm font-medium text-zinc-200">{b.name}</span>
+                    <span className="text-xs font-mono text-zinc-500">{b.count}g</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Head-to-Head */}
       {h2h.length > 0 && (
         <div className="mb-8">
           <h2 className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-3">
@@ -106,10 +190,7 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
                 {h2h.map((entry) => (
                   <tr key={entry.opponent.id} className="border-t border-zinc-800/40 hover:bg-zinc-800/20 transition-colors">
                     <td className="px-4 py-2.5">
-                      <Link
-                        href={`/teams/${entry.opponent.slug}`}
-                        className="font-medium text-zinc-200 hover:text-white transition-colors"
-                      >
+                      <Link href={`/teams/${entry.opponent.slug}`} className="font-medium text-zinc-200 hover:text-white transition-colors">
                         {entry.opponent.name}
                       </Link>
                     </td>

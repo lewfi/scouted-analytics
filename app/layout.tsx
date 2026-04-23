@@ -1,16 +1,30 @@
 import type { Metadata } from 'next'
+import { Inter, DM_Mono } from 'next/font/google'
 import AppShell from '@/components/layout/AppShell'
 import './globals.css'
 
-export const metadata = {
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+const dmMono = DM_Mono({
+  weight: ['300', '400', '500'],
+  subsets: ['latin'],
+  variable: '--font-dm-mono',
+  display: 'swap',
+})
+
+export const metadata: Metadata = {
   title: 'Scouted',
-  description: 'Track LoL esports!',
+  description: 'LoL esports analytics and scouting.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
+    <html lang="en" className={`${inter.variable} ${dmMono.variable}`}>
+      <body className="min-h-screen antialiased">
         <AppShell>{children}</AppShell>
       </body>
     </html>

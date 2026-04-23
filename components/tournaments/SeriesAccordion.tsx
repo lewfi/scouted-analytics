@@ -24,19 +24,21 @@ function GameRow({ game, match }: { game: any; match: any }) {
     .filter(p => p.side === 2)
     .sort((a, b) => roleOrder.indexOf(a.role) - roleOrder.indexOf(b.role))
 
+  const hasDraft = (game.team_blue_bans?.length > 0 || game.team_red_bans?.length > 0)
+
   return (
     <div className="border-t border-zinc-800/60 first:border-t-0">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-800/30 transition-colors text-left"
       >
-        <span className="text-xs text-zinc-500 w-12 shrink-0">Game {game.game_number}</span>
+        <span className="text-xs text-zinc-500 w-12 shrink-0 font-mono">Game {game.game_number}</span>
 
         <div className="flex-1 flex items-center gap-2">
-          <span className={`text-xs font-semibold truncate max-w-20 ${blueWon ? 'text-zinc-100' : 'text-zinc-500'}`}>
+          <span className={`text-xs font-semibold truncate max-w-24 ${blueWon ? 'text-zinc-100' : 'text-zinc-500'}`}>
             {match.team_blue?.name}
           </span>
-          <span className={`text-sm font-bold font-mono ${blueWon ? 'text-blue-400' : 'text-zinc-500'}`}>
+          <span className={`text-sm font-bold font-mono ${blueWon ? 'text-accent' : 'text-zinc-500'}`}>
             {blueKills}
           </span>
           <span className="text-xs text-zinc-600">k</span>
@@ -49,13 +51,13 @@ function GameRow({ game, match }: { game: any; match: any }) {
           <span className={`text-sm font-bold font-mono ${redWon ? 'text-red-400' : 'text-zinc-500'}`}>
             {redKills}
           </span>
-          <span className={`text-xs font-semibold truncate max-w-20 ${redWon ? 'text-zinc-100' : 'text-zinc-500'}`}>
+          <span className={`text-xs font-semibold truncate max-w-24 ${redWon ? 'text-zinc-100' : 'text-zinc-500'}`}>
             {match.team_red?.name}
           </span>
         </div>
 
         {game.duration_seconds && (
-          <span className="text-xs text-zinc-600 w-12 text-right shrink-0">
+          <span className="text-xs text-zinc-600 font-mono w-12 text-right shrink-0">
             {Math.floor(game.duration_seconds / 60)}:{String(game.duration_seconds % 60).padStart(2, '0')}
           </span>
         )}
@@ -70,33 +72,29 @@ function GameRow({ game, match }: { game: any; match: any }) {
 
       {open && (
         <div className="px-4 pb-3 space-y-2">
-          {/* Draft */}
-          {(game.team_blue_bans?.length > 0 || game.team_red_bans?.length > 0) && (
-            <div className="rounded-lg overflow-hidden border border-zinc-800/60">
+          {hasDraft && (
+            <div className="rounded-lg overflow-hidden border border-zinc-700/50">
               <DraftRow
                 label="Bans"
                 blue={game.team_blue_bans ?? []}
                 red={game.team_red_bans ?? []}
-                blueTeam={match.team_blue?.name}
-                redTeam={match.team_red?.name}
+                type="bans"
               />
               {(game.team_blue_picks?.length > 0 || game.team_red_picks?.length > 0) && (
                 <DraftRow
                   label="Picks"
                   blue={game.team_blue_picks ?? []}
                   red={game.team_red_picks ?? []}
-                  blueTeam={match.team_blue?.name}
-                  redTeam={match.team_red?.name}
+                  type="picks"
                 />
               )}
             </div>
           )}
 
-          {/* Player stats */}
           {stats.length > 0 && (
-            <div className="rounded-lg overflow-hidden border border-zinc-800/60">
+            <div className="rounded-lg overflow-hidden border border-zinc-700/50">
               <StatsTable players={bluePlayers} teamName={match.team_blue?.name} won={blueWon} />
-              <StatsTable players={redPlayers} teamName={match.team_red?.name} won={redWon} />
+              <StatsTable players={redPlayers}  teamName={match.team_red?.name}  won={redWon} />
             </div>
           )}
         </div>
@@ -105,20 +103,24 @@ function GameRow({ game, match }: { game: any; match: any }) {
   )
 }
 
-function DraftRow({ label, blue, red, blueTeam, redTeam }: {
-  label: string; blue: string[]; red: string[]; blueTeam: string; redTeam: string
-}) {
+function DraftRow({ label, blue, red, type }: { label: string; blue: string[]; red: string[]; type: 'bans' | 'picks' }) {
+  const isBans = type === 'bans'
+  const pillClass = isBans
+    ? 'text-xs bg-red-500/10 text-red-500 border border-red-500/25 px-1.5 py-0.5 rounded font-medium'
+    : 'text-xs bg-blue-500/10 text-blue-400 border border-blue-500/25 px-1.5 py-0.5 rounded font-medium'
+  const rowBg = isBans ? 'bg-red-500/[0.04]' : 'bg-blue-500/[0.03]'
+
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2 px-3 py-2 border-b border-zinc-800/60 last:border-b-0">
+    <div className={`grid grid-cols-[1fr_auto_1fr] items-start gap-2 px-3 py-2 border-b border-zinc-700/50 last:border-b-0 ${rowBg}`}>
       <div className="flex flex-wrap gap-1">
         {blue.map((c, i) => (
-          <span key={i} className="text-xs bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded font-medium">{c}</span>
+          <span key={i} className={pillClass}>{c}</span>
         ))}
       </div>
-      <span className="text-xs text-zinc-600 font-medium w-10 text-center pt-0.5">{label}</span>
+      <span className="text-[10px] text-zinc-600 font-semibold uppercase tracking-wider w-10 text-center pt-1">{label}</span>
       <div className="flex flex-wrap gap-1 justify-end">
         {red.map((c, i) => (
-          <span key={i} className="text-xs bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded font-medium">{c}</span>
+          <span key={i} className={pillClass}>{c}</span>
         ))}
       </div>
     </div>
@@ -128,12 +130,14 @@ function DraftRow({ label, blue, red, blueTeam, redTeam }: {
 function StatsTable({ players, teamName, won }: { players: any[]; teamName: string; won: boolean }) {
   return (
     <div>
-      <div className={`px-3 py-1.5 text-xs font-medium uppercase tracking-wider ${won ? 'bg-zinc-800 text-zinc-300' : 'bg-zinc-900 text-zinc-500'}`}>
+      <div className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider ${
+        won ? 'bg-zinc-800 text-zinc-200' : 'bg-zinc-900/80 text-zinc-500'
+      }`}>
         {teamName}
       </div>
       <table className="w-full text-xs">
         <thead>
-          <tr className="text-zinc-600 border-b border-zinc-800/60">
+          <tr className="text-zinc-600 border-b border-zinc-700/50">
             <th className="text-left px-3 py-1.5 font-medium">Champion</th>
             <th className="text-left px-3 py-1.5 font-medium hidden sm:table-cell">Role</th>
             <th className="text-center px-3 py-1.5 font-medium">KDA</th>
@@ -144,13 +148,13 @@ function StatsTable({ players, teamName, won }: { players: any[]; teamName: stri
         </thead>
         <tbody>
           {players.map((p, i) => (
-            <tr key={i} className="border-t border-zinc-800/40 hover:bg-zinc-800/20">
+            <tr key={i} className="border-t border-zinc-700/40 hover:bg-zinc-700/10 transition-colors">
               <td className="px-3 py-2">
-                <div>
-                  <span className="font-medium text-zinc-200">{p.champion ?? '—'}</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="font-semibold text-zinc-200">{p.champion ?? '—'}</span>
                   <Link
                     href={`/players/${encodeURIComponent(p.player_name?.split(' (')[0] ?? '')}`}
-                    className="ml-2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                    className="text-zinc-500 hover:text-zinc-300 transition-colors"
                     onClick={e => e.stopPropagation()}
                   >
                     {p.player_name?.split(' (')[0]}
@@ -172,7 +176,7 @@ function StatsTable({ players, teamName, won }: { players: any[]; teamName: stri
               <td className="px-3 py-2 hidden lg:table-cell">
                 <div className="flex flex-wrap gap-1">
                   {(p.items ?? []).filter(Boolean).map((item: string, j: number) => (
-                    <span key={j} className="text-zinc-500 text-xs bg-zinc-800 px-1.5 py-0.5 rounded">
+                    <span key={j} className="text-zinc-400 text-xs bg-zinc-700 border border-zinc-600/30 px-1.5 py-0.5 rounded">
                       {item}
                     </span>
                   ))}
@@ -193,7 +197,7 @@ export default function SeriesAccordion({ match }: { match: any }) {
   const games: any[] = (match.games ?? []).sort((a: any, b: any) => a.game_number - b.game_number)
 
   return (
-    <div className="border border-zinc-800/60 rounded-xl overflow-hidden">
+    <div className="card-lift border border-zinc-800/60 rounded-xl overflow-hidden hover:border-zinc-700/70">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-zinc-800/30 transition-colors text-left"
@@ -206,12 +210,12 @@ export default function SeriesAccordion({ match }: { match: any }) {
           {match.team_blue?.name}
         </Link>
 
-        <div className="flex items-center gap-1.5 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 shrink-0">
-          <span className={`text-sm font-mono font-semibold ${blueWon ? 'text-zinc-100' : 'text-zinc-500'}`}>
+        <div className="flex items-center gap-1.5 bg-zinc-950/60 border border-zinc-800/80 rounded-lg px-3 py-1.5 shrink-0">
+          <span className={`text-sm font-mono font-bold ${blueWon ? 'text-accent [text-shadow:0_0_10px_rgba(45,98,255,0.55)]' : 'text-zinc-500'}`}>
             {match.blue_score}
           </span>
           <span className="text-xs text-zinc-600">–</span>
-          <span className={`text-sm font-mono font-semibold ${redWon ? 'text-zinc-100' : 'text-zinc-500'}`}>
+          <span className={`text-sm font-mono font-bold ${redWon ? 'text-accent [text-shadow:0_0_10px_rgba(45,98,255,0.55)]' : 'text-zinc-500'}`}>
             {match.red_score}
           </span>
         </div>
@@ -233,7 +237,7 @@ export default function SeriesAccordion({ match }: { match: any }) {
       </button>
 
       {open && (
-        <div className="bg-zinc-900/50">
+        <div className="bg-zinc-900/40 border-t border-zinc-800/60">
           {games.length > 0 ? (
             games.map(game => (
               <GameRow key={game.id} game={game} match={match} />

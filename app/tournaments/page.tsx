@@ -19,7 +19,7 @@ export default async function TournamentsPage() {
   const today = new Date().toISOString().slice(0, 10)
 
   return (
-    <div className="p-8 max-w-3xl animate-fade-in">
+    <div className="px-6 py-10 max-w-3xl mx-auto animate-fade-in">
       <h1 className="text-2xl font-bold text-zinc-100 tracking-tight mb-8">Tournaments</h1>
 
       <div className="flex flex-col gap-10">

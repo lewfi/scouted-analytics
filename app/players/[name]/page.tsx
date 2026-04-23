@@ -76,7 +76,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ name: s
     .sort((a, b) => b.games - a.games)
 
   return (
-    <div className="p-8 max-w-3xl animate-fade-in">
+    <div className="px-6 py-10 max-w-3xl mx-auto animate-fade-in">
 
       <div className="mb-8">
         <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-1">
@@ -123,7 +123,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ name: s
                   </tr>
                 </thead>
                 <tbody>
-                  {champPool.map((c, i) => (
+                  {champPool.map((c) => (
                     <tr key={c.name} className="border-t border-zinc-800/40 hover:bg-zinc-800/20">
                       <td className="px-4 py-2.5 font-medium text-zinc-200">{c.name}</td>
                       <td className="px-4 py-2.5 text-center text-zinc-400 font-mono">{c.games}</td>
@@ -151,7 +151,6 @@ export default async function PlayerPage({ params }: { params: Promise<{ name: s
                 const match = game?.match
                 const won   = game?.winning_team_id === s.team_id
                 const isBlue = match?.team_blue_id === s.team_id
-                const opponent = isBlue ? match?.team_blue : match?.team_red
                 const opponentTeam = isBlue ? match?.team_red : match?.team_blue
                 const playedAt = game?.played_at
                   ? new Date(game.played_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })

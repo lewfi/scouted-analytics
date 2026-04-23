@@ -94,7 +94,7 @@ export default async function TournamentPage({ params }: { params: Promise<{ nam
     : null
 
   return (
-    <div className="p-8 max-w-3xl animate-fade-in">
+    <div className="px-6 py-10 max-w-3xl mx-auto animate-fade-in">
 
       {/* Header */}
       <div className="mb-8">

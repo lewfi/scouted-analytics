@@ -41,6 +41,7 @@ export default async function RegionPage({ params }: { params: Promise<{ region:
           team_red:teams!matches_team_red_id_fkey(id, name, slug),
           games(
             id, game_number, winning_team_id, duration_seconds,
+            team_blue_picks, team_red_picks, team_blue_bans, team_red_bans,
             player_game_stats(
               id, player_id, player_name, team_id, side, role, champion,
               kills, deaths, assists, cs, gold_earned, items
@@ -79,7 +80,7 @@ export default async function RegionPage({ params }: { params: Promise<{ region:
     d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null
 
   return (
-    <div className="p-8 max-w-3xl animate-fade-in">
+    <div className="px-6 py-10 max-w-3xl mx-auto animate-fade-in">
 
       <h1 className="text-3xl font-bold text-zinc-100 tracking-tight mb-8">{region.name}</h1>
 

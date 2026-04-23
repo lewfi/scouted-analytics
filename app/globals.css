@@ -1,26 +1,139 @@
 @import "tailwindcss";
 
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+
 :root {
+  /* Dark palette — Sphere-inspired deep charcoal */
+  --z950: #0a0c0d;
+  --z900: #131517;
+  --z800: #1e2329;
+  --z700: #28303c;
+  --z600: #4a5568;
+  --z500: #6b7888;
+  --z400: #8c9aaa;
+  --z300: #b4bfc9;
+  --z200: #d5dce4;
+  --z100: #eef1f5;
+  --z50:  #f8f9fb;
+
+  --accent:       #2d62ff;
+  --accent-hover: #4474ff;
+  --accent-muted: rgba(45, 98, 255, 0.14);
+
   color-scheme: dark;
 }
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
+.light {
+  /* Light palette — warm cream */
+  --z950: #e6e0d4;
+  --z900: #f4efe4;
+  --z800: #ece6d8;
+  --z700: #d4cdbf;
+  --z600: #a09890;
+  --z500: #7e7670;
+  --z400: #5e5750;
+  --z300: #3e3830;
+  --z200: #282218;
+  --z100: #1c1710;
+  --z50:  #100d08;
+
+  --accent:       #1a50ee;
+  --accent-hover: #1240d8;
+  --accent-muted: rgba(26, 80, 238, 0.10);
+
+  color-scheme: light;
 }
 
+/* ============================================================
+   TAILWIND THEME OVERRIDES
+   ============================================================ */
+
+@theme {
+  --color-zinc-50:  var(--z50);
+  --color-zinc-100: var(--z100);
+  --color-zinc-200: var(--z200);
+  --color-zinc-300: var(--z300);
+  --color-zinc-400: var(--z400);
+  --color-zinc-500: var(--z500);
+  --color-zinc-600: var(--z600);
+  --color-zinc-700: var(--z700);
+  --color-zinc-800: var(--z800);
+  --color-zinc-900: var(--z900);
+  --color-zinc-950: var(--z950);
+
+  --color-accent: var(--accent);
+
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-dm-mono), 'Courier New', monospace;
+}
+
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--z950);
+  /* Sphere-style dot grid */
+  background-image: radial-gradient(var(--z800) 1px, transparent 1px);
+  background-size: 28px 28px;
+  color: var(--z100);
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Headings: tighter tracking */
+h1, h2, h3 {
+  letter-spacing: -0.02em;
+}
+
+/* Cards pick up subtle shadow in light mode */
+.light [class*="border-zinc-8"],
+.light [class*="border-zinc-7"] {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Interactive card lift — apply to hoverable card containers */
+.card-lift {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.light .card-lift:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Focus ring uses accent */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--z700); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--z600); }
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+
 @keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in-up {
-  animation: fade-in-up 0.35s ease forwards;
+  animation: fade-in-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   opacity: 0;
 }
 
@@ -34,7 +147,10 @@ body {
   opacity: 0;
 }
 
-@keyframes slide-in-left {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(0); }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 0.7s linear infinite;
 }

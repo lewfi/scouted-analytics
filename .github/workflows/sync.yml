@@ -2,9 +2,13 @@ name: Sync Leaguepedia
 
 on:
   schedule:
-    # Runs every 3 hours
-    - cron: '0 */3 * * *'
-  workflow_dispatch: # allows manual trigger from GitHub UI
+    - cron: '0 * * * *'  # every hour
+  workflow_dispatch:      # allows manual trigger from GitHub UI
+
+# Prevent overlapping runs — queue the next one instead of cancelling
+concurrency:
+  group: sync-leaguepedia
+  cancel-in-progress: false
 
 jobs:
   sync:

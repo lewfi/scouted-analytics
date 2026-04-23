@@ -21,6 +21,7 @@ export default async function Home() {
         tournament:tournaments(name, region_id),
         games(
           id, game_number, winning_team_id, duration_seconds, patch, played_at,
+          team_blue_picks, team_red_picks, team_blue_bans, team_red_bans,
           player_game_stats(
             id, player_id, player_name, team_id, side, role, champion,
             kills, deaths, assists, cs, gold_earned, items
@@ -41,7 +42,7 @@ export default async function Home() {
   ])
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="px-6 py-10 max-w-3xl mx-auto">
 
       {ongoing && ongoing.length > 0 && (
         <div className="mb-8">

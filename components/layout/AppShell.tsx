@@ -9,7 +9,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchOpen,  setSearchOpen]  = useState(false)
 
-  // Cmd+K / Ctrl+K to open search
+  // Initialize theme from localStorage before first paint
+  useEffect(() => {
+    const stored = localStorage.getItem('scouted-theme')
+    if (stored === 'light') document.documentElement.classList.add('light')
+  }, [])
+
+  // Cmd+K / Ctrl+K
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -23,7 +29,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div>
-      <Navbar onMenuClick={() => setSidebarOpen(true)} onSearchClick={() => setSearchOpen(true)} />
+      <Navbar
+        onMenuClick={() => setSidebarOpen(true)}
+        onSearchClick={() => setSearchOpen(true)}
+      />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
       <main className="pt-14 min-h-screen">
