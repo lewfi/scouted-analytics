@@ -1,28 +1,29 @@
 import SeriesAccordion from './SeriesAccordion'
 
 function normalizeStage(stage: string): string {
-  if (/grand.?final/i.test(stage))   return 'Finals'
-  if (/^final/i.test(stage))         return 'Finals'
-  if (/semi.?final/i.test(stage))    return 'Semifinals'
-  if (/quarter.?final/i.test(stage)) return 'Quarterfinals'
-  if (/round of 8/i.test(stage))     return 'Round of 8'
-  if (/round of 16/i.test(stage))    return 'Round of 16'
-  if (/round of 32/i.test(stage))    return 'Round of 32'
-  if (/tiebreaker/i.test(stage))     return 'Tiebreakers'
+  if (/grand.?final/i.test(stage))      return 'Finals'
+  if (/^final/i.test(stage))            return 'Finals'
+  if (/semi.?final/i.test(stage))       return 'Semifinals'
+  if (/quarter.?final/i.test(stage))    return 'Quarterfinals'
+  if (/round of 8/i.test(stage))        return 'Round of 8'
+  if (/round of 16/i.test(stage))       return 'Round of 16'
+  if (/round of 32/i.test(stage))       return 'Round of 32'
+  if (/tiebreaker/i.test(stage))        return 'Tiebreakers'
+  if (/qualification/i.test(stage))     return 'Qualification'
   return stage
 }
 
-// Returns a sort index — lower = displayed first (Finals at top)
+// Returns a sort index — lower = displayed first (earlier rounds first, Finals last)
 function stageIndex(stage: string): number {
   const fixed: Record<string, number> = {
-    'Finals': 0, 'Semifinals': 1, 'Quarterfinals': 2,
-    'Round of 8': 3, 'Round of 16': 4, 'Round of 32': 5,
-    'Tiebreakers': 6,
+    'Round of 32': 0, 'Round of 16': 1, 'Round of 8': 2,
+    'Quarterfinals': 3, 'Semifinals': 4, 'Finals': 5,
+    'Tiebreakers': 6, 'Qualification': 7,
   }
   if (fixed[stage] !== undefined) return fixed[stage]
-  // "Round N" format (LCK playoffs): higher round number = earlier display
+  // "Round N" format (LCK playoffs / EWC groups): lower round number = earlier display
   const m = stage.match(/^round\s+(\d+)$/i)
-  if (m) return 100 - parseInt(m[1])
+  if (m) return parseInt(m[1])
   return 999
 }
 
