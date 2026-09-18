@@ -1,5 +1,10 @@
 # Scouted
 
+---
+
+## NOTE:
+- Discontinued this project until further notice as needs re-evaluation. Workflows were un-optimized and free, easy-to-use APIs within this topic were hard to find. Project may be revisited some time later.
+
 A sleek, data-driven esports tracker for Tier 1 League of Legends — covering LCK, LEC, LCS, LPL, and LCP. Built for fans who want real stats, clean visuals, and useful tools for Pick'em brackets and PrizePicks decisions, all in one place. Expanding to Valorant and beyond.
 
 ---
